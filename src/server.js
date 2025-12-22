@@ -33,6 +33,32 @@ const wss = new WebSocketServer({ server });
 const PORT = process.env.PORT || 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+const ADMIN_PANEL_USER = process.env.ADMIN_PANEL_USER;
+const ADMIN_PANEL_PASS = process.env.ADMIN_PANEL_PASS;
+
+function requireAdminAuth(req, res, next) {
+  if (!ADMIN_PANEL_USER || !ADMIN_PANEL_PASS) {
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Cart Path Chat Admin"');
+    return res.status(401).send('Authentication required');
+  }
+
+  const base64Credentials = authHeader.slice('Basic '.length).trim();
+  const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
+  const [username, password] = credentials.split(':');
+
+  if (username !== ADMIN_PANEL_USER || password !== ADMIN_PANEL_PASS) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Cart Path Chat Admin"');
+    return res.status(401).send('Invalid credentials');
+  }
+
+  return next();
+}
+
 // Middleware
 app.use(cors({
   origin: [FRONTEND_URL, 'https://cartpathcleaning.com', 'http://cartpathcleaning.com'],
@@ -174,7 +200,7 @@ async function handleChatMessage(ws, visitorId, message) {
 // REST API endpoints
 
 // Get all conversations (for admin panel)
-app.get('/api/conversations', async (req, res) => {
+app.get('/api/conversations', requireAdminAuth, async (req, res) => {
   try {
     const conversations = await getAllConversations();
     res.json(conversations);
@@ -185,7 +211,7 @@ app.get('/api/conversations', async (req, res) => {
 });
 
 // Get specific conversation with messages
-app.get('/api/conversations/:id', async (req, res) => {
+app.get('/api/conversations/:id', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const conversation = await getConversation(id);
@@ -206,7 +232,7 @@ app.get('/api/conversations/:id', async (req, res) => {
 });
 
 // Send admin reply
-app.post('/api/conversations/:id/reply', async (req, res) => {
+app.post('/api/conversations/:id/reply', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
@@ -238,7 +264,7 @@ app.post('/api/conversations/:id/reply', async (req, res) => {
 });
 
 // Update conversation status
-app.patch('/api/conversations/:id/status', async (req, res) => {
+app.patch('/api/conversations/:id/status', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -252,7 +278,7 @@ app.patch('/api/conversations/:id/status', async (req, res) => {
 });
 
 // Scheduling endpoints
-app.get('/api/scheduled-visits', async (req, res) => {
+app.get('/api/scheduled-visits', requireAdminAuth, async (req, res) => {
   try {
     const visits = await getScheduledVisits();
     res.json(visits);
@@ -262,7 +288,7 @@ app.get('/api/scheduled-visits', async (req, res) => {
   }
 });
 
-app.get('/api/scheduled-visits/:id', async (req, res) => {
+app.get('/api/scheduled-visits/:id', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const visit = await getScheduledVisit(id);
@@ -278,7 +304,7 @@ app.get('/api/scheduled-visits/:id', async (req, res) => {
   }
 });
 
-app.patch('/api/scheduled-visits/:id/status', async (req, res) => {
+app.patch('/api/scheduled-visits/:id/status', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -305,6 +331,14 @@ app.get('/health', (req, res) => {
 // Serve admin panel
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+app.get('/admin.html', requireAdminAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin.html'));
+});
+
+app.get('/scheduled-visits.html', requireAdminAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/scheduled-visits.html'));
+});
 
 app.use(express.static(path.join(__dirname, '../public')));
 
