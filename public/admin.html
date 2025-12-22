@@ -19,6 +19,25 @@
       padding: 1rem;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+    .header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+    }
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .nav-links a:hover {
+      background: rgba(255,255,255,0.2);
+    }
     .container {
       max-width: 1200px;
       margin: 0 auto;
@@ -172,6 +191,10 @@
   <div class="header">
     <div class="container">
       <h1>💬 Chat Admin</h1>
+      <div class="nav-links">
+        <a href="/admin.html">💬 Chats</a>
+        <a href="/scheduled-visits.html">📅 Visits</a>
+      </div>
     </div>
   </div>
 
