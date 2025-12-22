@@ -43,12 +43,19 @@
       margin: 0 auto;
       padding: 1rem;
     }
-    .add-response-card {
+    .add-response-card, .edit-response-card {
       background: white;
       border-radius: 8px;
       padding: 1rem;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       margin-bottom: 1rem;
+    }
+    .edit-response-card {
+      display: none;
+      border: 2px solid #10b981;
+    }
+    .edit-response-card.active {
+      display: block;
     }
     .form-row {
       display: grid;
@@ -160,6 +167,25 @@
   </div>
 
   <div class="container">
+    <div class="edit-response-card" id="editResponseCard">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="font-size: 1.1rem;">Edit Quick Reply</h3>
+        <button class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
+      </div>
+      <form id="editResponseForm">
+        <input type="hidden" id="editId" />
+        <div class="form-row">
+          <label class="form-label">Shortcut (e.g., /pricing, /hours)</label>
+          <input type="text" id="editShortcut" class="form-input" placeholder="/pricing" required />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Message</label>
+          <textarea id="editMessage" class="form-textarea" placeholder="Our pricing starts at..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Update Quick Reply</button>
+      </form>
+    </div>
+
     <div class="add-response-card">
       <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Add New Quick Reply</h3>
       <form id="addResponseForm">
@@ -202,6 +228,7 @@
             </div>
             <div class="message-preview">${resp.message}</div>
             <div class="response-actions">
+              <button class="btn btn-secondary" onclick="editResponse('${resp.id}', '${resp.shortcut.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', '${resp.message.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n')}')">Edit</button>
               <button class="btn btn-danger" onclick="deleteResponse('${resp.id}')">Delete</button>
             </div>
           </div>
@@ -233,6 +260,45 @@
       } catch (error) {
         console.error('Failed to add canned response:', error);
         alert('Failed to add quick reply');
+      }
+    });
+
+    function editResponse(id, shortcut, message) {
+      document.getElementById('editId').value = id;
+      document.getElementById('editShortcut').value = shortcut;
+      document.getElementById('editMessage').value = message;
+      document.getElementById('editResponseCard').classList.add('active');
+      document.getElementById('editResponseCard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelEdit() {
+      document.getElementById('editResponseCard').classList.remove('active');
+      document.getElementById('editId').value = '';
+      document.getElementById('editShortcut').value = '';
+      document.getElementById('editMessage').value = '';
+    }
+
+    document.getElementById('editResponseForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const id = document.getElementById('editId').value;
+      const shortcut = document.getElementById('editShortcut').value.trim();
+      const message = document.getElementById('editMessage').value.trim();
+      
+      if (!id || !shortcut || !message) return;
+      
+      try {
+        await fetch(`${API_URL}/api/canned-responses/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shortcut, message })
+        });
+        
+        cancelEdit();
+        loadCannedResponses();
+      } catch (error) {
+        console.error('Failed to update canned response:', error);
+        alert('Failed to update quick reply');
       }
     });
 
