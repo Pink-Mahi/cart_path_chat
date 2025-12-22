@@ -77,13 +77,14 @@ wss.on('connection', (ws, req) => {
 async function handleChatMessage(ws, visitorId, message) {
   const { type, content, visitorName, visitorEmail, conversationId } = message;
   
+  // Get or create conversation for all message types
+  const conversation = await getOrCreateConversation(
+    conversationId || visitorId,
+    visitorName,
+    visitorEmail
+  );
+  
   if (type === 'chat') {
-    // Get or create conversation
-    const conversation = await getOrCreateConversation(
-      conversationId || visitorId,
-      visitorName,
-      visitorEmail
-    );
     
     // Save visitor message
     await addMessage(conversation.id, 'visitor', content);
