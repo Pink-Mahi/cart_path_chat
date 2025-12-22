@@ -31,8 +31,9 @@ const wss = new WebSocketServer({ server });
 const PORT = process.env.PORT || 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+// Middleware
 app.use(cors({
-  origin: [FRONTEND_URL, 'http://localhost:5173'],
+  origin: [FRONTEND_URL, 'https://cartpathcleaning.com', 'http://cartpathcleaning.com'],
   credentials: true
 }));
 app.use(express.json());
