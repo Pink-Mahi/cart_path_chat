@@ -469,6 +469,81 @@ app.patch('/api/scheduled-visits/:id/status', requireAdminAuth, async (req, res)
   }
 });
 
+// Call requests endpoints
+app.get('/api/call-requests', requireAdminAuth, async (req, res) => {
+  try {
+    const requests = await getCallRequests();
+    res.json(requests);
+  } catch (error) {
+    console.error('Error fetching call requests:', error);
+    res.status(500).json({ error: 'Failed to fetch call requests' });
+  }
+});
+
+app.patch('/api/call-requests/:id/status', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const request = await updateCallRequestStatus(id, status);
+    res.json(request);
+  } catch (error) {
+    console.error('Error updating call request status:', error);
+    res.status(500).json({ error: 'Failed to update call request status' });
+  }
+});
+
+// Canned responses endpoints
+app.get('/api/canned-responses', requireAdminAuth, async (req, res) => {
+  try {
+    const responses = await getCannedResponses();
+    res.json(responses);
+  } catch (error) {
+    console.error('Error fetching canned responses:', error);
+    res.status(500).json({ error: 'Failed to fetch canned responses' });
+  }
+});
+
+app.post('/api/canned-responses', requireAdminAuth, async (req, res) => {
+  try {
+    const { shortcut, message } = req.body;
+    const response = await createCannedResponse(shortcut, message);
+    res.json(response);
+  } catch (error) {
+    console.error('Error creating canned response:', error);
+    res.status(500).json({ error: 'Failed to create canned response' });
+  }
+});
+
+app.patch('/api/canned-responses/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { shortcut, message } = req.body;
+    const response = await updateCannedResponse(id, shortcut, message);
+    res.json(response);
+  } catch (error) {
+    console.error('Error updating canned response:', error);
+    res.status(500).json({ error: 'Failed to update canned response' });
+  }
+});
+
+app.delete('/api/canned-responses/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await deleteCannedResponse(id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting canned response:', error);
+    res.status(500).json({ error: 'Failed to delete canned response' });
+  }
+});
+
+// Business hours endpoint
+app.get('/api/business-hours', (req, res) => {
+  const inHours = isBusinessHours();
+  const message = inHours ? null : getAfterHoursMessage();
+  res.json({ inBusinessHours: inHours, afterHoursMessage: message });
+});
+
 // WhatsApp info endpoint
 app.get('/api/whatsapp-link', (req, res) => {
   const link = getBusinessWhatsAppLink();
