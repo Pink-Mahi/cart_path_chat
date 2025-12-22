@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Replies - Cart Path Cleaning</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+    .header {
+      background: #10b981;
+      color: white;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+    }
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .nav-links a:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    .add-response-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+    }
+    .form-row {
+      display: grid;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .form-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #374151;
+    }
+    .form-input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    .form-textarea {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      resize: vertical;
+      min-height: 80px;
+    }
+    .responses-list {
+      display: grid;
+      gap: 1rem;
+    }
+    .response-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .response-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .shortcut {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #10b981;
+    }
+    .message-preview {
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      white-space: pre-wrap;
+    }
+    .response-actions {
+      display: flex;
+      gap: 0.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid #e5e7eb;
+    }
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #10b981;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #059669;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <h1>💬 Quick Replies</h1>
+      <div class="nav-links">
+        <a href="/admin.html">💬 Chats</a>
+        <a href="/scheduled-visits.html">📅 Visits</a>
+        <a href="/call-requests.html">📞 Call Requests</a>
+        <a href="/canned-responses.html">💬 Quick Replies</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="add-response-card">
+      <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Add New Quick Reply</h3>
+      <form id="addResponseForm">
+        <div class="form-row">
+          <label class="form-label">Shortcut (e.g., /pricing, /hours)</label>
+          <input type="text" id="shortcut" class="form-input" placeholder="/pricing" required />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Message</label>
+          <textarea id="message" class="form-textarea" placeholder="Our pricing starts at..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Quick Reply</button>
+      </form>
+    </div>
+
+    <div id="responses" class="responses-list">
+      <div class="loading">Loading quick replies...</div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin;
+
+    async function loadCannedResponses() {
+      try {
+        const response = await fetch(`${API_URL}/api/canned-responses`);
+        const responses = await response.json();
+        
+        const container = document.getElementById('responses');
+        
+        if (responses.length === 0) {
+          container.innerHTML = '<div class="loading">No quick replies yet. Add one above!</div>';
+          return;
+        }
+        
+        container.innerHTML = responses.map(resp => `
+          <div class="response-card">
+            <div class="response-header">
+              <div class="shortcut">${resp.shortcut}</div>
+            </div>
+            <div class="message-preview">${resp.message}</div>
+            <div class="response-actions">
+              <button class="btn btn-danger" onclick="deleteResponse('${resp.id}')">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load canned responses:', error);
+        document.getElementById('responses').innerHTML = '<div class="loading">Failed to load quick replies</div>';
+      }
+    }
+
+    document.getElementById('addResponseForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const shortcut = document.getElementById('shortcut').value.trim();
+      const message = document.getElementById('message').value.trim();
+      
+      if (!shortcut || !message) return;
+      
+      try {
+        await fetch(`${API_URL}/api/canned-responses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shortcut, message })
+        });
+        
+        document.getElementById('shortcut').value = '';
+        document.getElementById('message').value = '';
+        loadCannedResponses();
+      } catch (error) {
+        console.error('Failed to add canned response:', error);
+        alert('Failed to add quick reply');
+      }
+    });
+
+    async function deleteResponse(id) {
+      if (!confirm('Delete this quick reply?')) return;
+      
+      try {
+        await fetch(`${API_URL}/api/canned-responses/${id}`, {
+          method: 'DELETE'
+        });
+        loadCannedResponses();
+      } catch (error) {
+        console.error('Failed to delete canned response:', error);
+        alert('Failed to delete quick reply');
+      }
+    }
+
+    loadCannedResponses();
+  </script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Call Requests - Cart Path Cleaning</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+    .header {
+      background: #10b981;
+      color: white;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+    }
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .nav-links a:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    .requests-list {
+      display: grid;
+      gap: 1rem;
+    }
+    .request-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .request-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .visitor-name {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-called { background: #d1fae5; color: #065f46; }
+    .status-cancelled { background: #e5e7eb; color: #374151; }
+    .request-details {
+      display: grid;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .detail-row {
+      display: flex;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #6b7280;
+    }
+    .detail-value {
+      color: #111827;
+    }
+    .request-actions {
+      display: flex;
+      gap: 0.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid #e5e7eb;
+    }
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #10b981;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #059669;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <h1>📞 Call Requests</h1>
+      <div class="nav-links">
+        <a href="/admin.html">💬 Chats</a>
+        <a href="/scheduled-visits.html">📅 Visits</a>
+        <a href="/call-requests.html">📞 Call Requests</a>
+        <a href="/canned-responses.html">💬 Quick Replies</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="requests" class="requests-list">
+      <div class="loading">Loading call requests...</div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin;
+
+    async function loadCallRequests() {
+      try {
+        const response = await fetch(`${API_URL}/api/call-requests`);
+        const requests = await response.json();
+        
+        const container = document.getElementById('requests');
+        
+        if (requests.length === 0) {
+          container.innerHTML = '<div class="loading">No call requests yet</div>';
+          return;
+        }
+        
+        container.innerHTML = requests.map(req => {
+          const date = new Date(req.created_at).toLocaleString();
+          return `
+            <div class="request-card">
+              <div class="request-header">
+                <div class="visitor-name">${req.visitor_name}</div>
+                <span class="status-badge status-${req.status}">${req.status}</span>
+              </div>
+              <div class="request-details">
+                <div class="detail-row">
+                  <span class="detail-label">Phone:</span>
+                  <span class="detail-value"><a href="tel:${req.visitor_phone}">${req.visitor_phone}</a></span>
+                </div>
+                ${req.best_time ? `
+                  <div class="detail-row">
+                    <span class="detail-label">Best Time:</span>
+                    <span class="detail-value">${req.best_time}</span>
+                  </div>
+                ` : ''}
+                ${req.notes ? `
+                  <div class="detail-row">
+                    <span class="detail-label">Notes:</span>
+                    <span class="detail-value">${req.notes}</span>
+                  </div>
+                ` : ''}
+                <div class="detail-row">
+                  <span class="detail-label">Requested:</span>
+                  <span class="detail-value">${date}</span>
+                </div>
+              </div>
+              ${req.status === 'pending' ? `
+                <div class="request-actions">
+                  <button class="btn btn-primary" onclick="markAsCalled('${req.id}')">Mark as Called</button>
+                  <button class="btn btn-secondary" onclick="markAsCancelled('${req.id}')">Cancel</button>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('Failed to load call requests:', error);
+        document.getElementById('requests').innerHTML = '<div class="loading">Failed to load call requests</div>';
+      }
+    }
+
+    async function markAsCalled(id) {
+      try {
+        await fetch(`${API_URL}/api/call-requests/${id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'called' })
+        });
+        loadCallRequests();
+      } catch (error) {
+        console.error('Failed to update status:', error);
+        alert('Failed to update status');
+      }
+    }
+
+    async function markAsCancelled(id) {
+      try {
+        await fetch(`${API_URL}/api/call-requests/${id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'cancelled' })
+        });
+        loadCallRequests();
+      } catch (error) {
+        console.error('Failed to update status:', error);
+        alert('Failed to update status');
+      }
+    }
+
+    loadCallRequests();
+    setInterval(loadCallRequests, 30000);
+  </script>
+</body>
+</html>
