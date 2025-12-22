@@ -25,6 +25,9 @@ import {
   updateScheduledVisitStatus
 } from './db/scheduling.js';
 import { getAdminSettings, updateAdminSettings } from './db/adminSettings.js';
+import { createCallRequest, getCallRequests, getCallRequest, updateCallRequestStatus } from './db/callRequests.js';
+import { createCannedResponse, getCannedResponses, getCannedResponse, updateCannedResponse, deleteCannedResponse } from './db/cannedResponses.js';
+import { isBusinessHours, getAfterHoursMessage } from './utils/businessHours.js';
 
 dotenv.config();
 
@@ -281,6 +284,45 @@ async function handleChatMessage(ws, visitorId, message) {
       ws.send(JSON.stringify({
         type: 'error',
         content: 'Sorry, there was an error scheduling your visit. Please try again.'
+      }));
+    }
+  } else if (type === 'request_callback') {
+    // Handle call back request
+    try {
+      const callRequest = await createCallRequest({
+        conversationId: conversation.id,
+        visitorName: content.visitorName,
+        visitorPhone: content.visitorPhone,
+        bestTime: content.bestTime,
+        notes: content.notes
+      });
+
+      const settings = await getAdminSettings();
+      const to = settings.on_duty_phone || DEFAULT_ON_DUTY_PHONE;
+      if (to) {
+        const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/admin.html` : null;
+        const smsBody = link
+          ? `Cart Path Cleaning: Call back request from ${content.visitorName} at ${content.visitorPhone}. ${link}`
+          : `Cart Path Cleaning: Call back request from ${content.visitorName} at ${content.visitorPhone}.`;
+        
+        try {
+          await sendTwilioSms(to, smsBody);
+        } catch (err) {
+          console.error('Twilio SMS callback failed:', err);
+        }
+      }
+
+      ws.send(JSON.stringify({
+        type: 'system',
+        content: `Thanks! We'll call you back at ${content.visitorPhone}${content.bestTime ? ` (best time: ${content.bestTime})` : ''}.`,
+        conversationId: conversation.id,
+        callRequestId: callRequest.id
+      }));
+    } catch (error) {
+      console.error('Call request error:', error);
+      ws.send(JSON.stringify({
+        type: 'error',
+        content: 'Sorry, there was an error submitting your call back request. Please try again.'
       }));
     }
   }
