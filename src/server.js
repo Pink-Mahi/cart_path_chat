@@ -113,9 +113,15 @@ async function handleChatMessage(ws, visitorId, message) {
   );
   
   if (type === 'chat') {
-    
+    const existingMessages = await getMessages(conversation.id, 1);
+    const isFirstVisitorMessage = existingMessages.length === 0;
+
     // Save visitor message
     await addMessage(conversation.id, 'visitor', content);
+
+    if (isFirstVisitorMessage) {
+      await sendWhatsAppNotification(conversation, content, 'new_chat');
+    }
     
     // Get conversation history
     const history = await getMessages(conversation.id);

@@ -38,7 +38,10 @@ export async function sendWhatsAppNotification(conversation, message, type = 'hu
 function formatWhatsAppMessage(conversation, message, type) {
   const visitorName = conversation.visitor_name || 'Anonymous';
   const visitorEmail = conversation.visitor_email || 'No email';
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+  const adminBaseUrl =
+    process.env.ADMIN_PANEL_URL ||
+    process.env.COOLIFY_URL ||
+    (process.env.COOLIFY_FQDN ? `https://${process.env.COOLIFY_FQDN}` : 'http://localhost:3001');
   
   if (type === 'human_needed') {
     return `🔔 *Customer needs assistance*
@@ -49,7 +52,17 @@ function formatWhatsAppMessage(conversation, message, type) {
 💬 Message:
 "${message}"
 
-🔗 Reply here: ${frontendUrl}/admin/chat/${conversation.id}`;
+🔗 Open admin: ${adminBaseUrl}/admin.html`;
+  } else if (type === 'new_chat') {
+    return `💬 *New chat started*
+
+👤 Name: ${visitorName}
+📧 Email: ${visitorEmail}
+
+💬 First message:
+"${message}"
+
+🔗 Open admin: ${adminBaseUrl}/admin.html`;
   } else if (type === 'scheduling') {
     return `📅 *New visit scheduled*
 
@@ -57,7 +70,7 @@ function formatWhatsAppMessage(conversation, message, type) {
 📧 Email: ${visitorEmail}
 📍 ${message}
 
-🔗 View details: ${frontendUrl}/admin.html`;
+🔗 View details: ${adminBaseUrl}/scheduled-visits.html`;
   }
   
   return message;
