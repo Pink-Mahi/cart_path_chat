@@ -79,15 +79,38 @@ export const getMessages = async (conversationId, limit = 50) => {
   return result.rows;
 };
 
-export const getAllConversations = async (limit = 100) => {
+export const getAllConversations = async (limit = 100, filters = {}) => {
+  let whereClause = '1=1';
+  const params = [];
+  let paramCount = 1;
+
+  if (filters.assignedTo) {
+    whereClause += ` AND c.assigned_to = $${paramCount++}`;
+    params.push(filters.assignedTo);
+  }
+
+  if (filters.status) {
+    whereClause += ` AND c.status = $${paramCount++}`;
+    params.push(filters.status);
+  }
+
+  if (filters.unassignedOnly) {
+    whereClause += ` AND c.assigned_to IS NULL`;
+  }
+
+  params.push(limit);
+
   const result = await query(
     `SELECT c.*, 
+      u.name as assigned_to_name,
       (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) as message_count,
       (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message
      FROM conversations c 
+     LEFT JOIN users u ON c.assigned_to = u.id
+     WHERE ${whereClause}
      ORDER BY c.updated_at DESC 
-     LIMIT $1`,
-    [limit]
+     LIMIT $${paramCount}`,
+    params
   );
   return result.rows;
 };
@@ -96,6 +119,22 @@ export const updateConversationStatus = async (conversationId, status) => {
   const result = await query(
     'UPDATE conversations SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
     [status, conversationId]
+  );
+  return result.rows[0];
+};
+
+export const assignConversation = async (conversationId, userId) => {
+  const result = await query(
+    'UPDATE conversations SET assigned_to = $1, assigned_at = CURRENT_TIMESTAMP, status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
+    [userId, 'assigned', conversationId]
+  );
+  return result.rows[0];
+};
+
+export const unassignConversation = async (conversationId) => {
+  const result = await query(
+    'UPDATE conversations SET assigned_to = NULL, assigned_at = NULL, status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+    ['unassigned', conversationId]
   );
   return result.rows[0];
 };

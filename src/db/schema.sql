@@ -1,3 +1,23 @@
+-- Users table for team authentication
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL DEFAULT 'agent', -- 'admin' or 'agent'
+  phone_number VARCHAR(50),
+  notify_sms BOOLEAN DEFAULT TRUE,
+  notify_call BOOLEAN DEFAULT FALSE,
+  notify_in_app BOOLEAN DEFAULT TRUE,
+  is_muted BOOLEAN DEFAULT FALSE,
+  muted_until TIMESTAMP,
+  work_schedule JSONB DEFAULT '{"monday":{"start":"09:00","end":"17:00","enabled":true},"tuesday":{"start":"09:00","end":"17:00","enabled":true},"wednesday":{"start":"09:00","end":"17:00","enabled":true},"thursday":{"start":"09:00","end":"17:00","enabled":true},"friday":{"start":"09:00","end":"17:00","enabled":true},"saturday":{"enabled":false},"sunday":{"enabled":false},"lunch_break":{"start":"12:00","end":"13:00","enabled":false}}',
+  is_active BOOLEAN DEFAULT TRUE,
+  last_seen TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Chat conversations table
 CREATE TABLE IF NOT EXISTS conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -5,7 +25,9 @@ CREATE TABLE IF NOT EXISTS conversations (
   visitor_name VARCHAR(255),
   visitor_email VARCHAR(255),
   visitor_phone VARCHAR(50),
-  status VARCHAR(50) DEFAULT 'active',
+  status VARCHAR(50) DEFAULT 'unassigned', -- 'unassigned', 'assigned', 'waiting', 'resolved', 'closed'
+  assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
+  assigned_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -70,9 +92,22 @@ CREATE TABLE IF NOT EXISTS canned_responses (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Admin presence tracking table
+CREATE TABLE IF NOT EXISTS admin_presence (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  is_online BOOLEAN DEFAULT FALSE,
+  current_conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
+  is_typing BOOLEAN DEFAULT FALSE,
+  last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
 CREATE INDEX IF NOT EXISTS idx_conversations_visitor ON conversations(visitor_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status);
+CREATE INDEX IF NOT EXISTS idx_conversations_assigned ON conversations(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
 CREATE INDEX IF NOT EXISTS idx_scheduled_visits_conversation ON scheduled_visits(conversation_id);
@@ -80,3 +115,4 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_visits_date ON scheduled_visits(preferr
 CREATE INDEX IF NOT EXISTS idx_scheduled_visits_status ON scheduled_visits(status);
 CREATE INDEX IF NOT EXISTS idx_call_requests_status ON call_requests(status);
 CREATE INDEX IF NOT EXISTS idx_call_requests_created ON call_requests(created_at);
+CREATE INDEX IF NOT EXISTS idx_admin_presence_conversation ON admin_presence(current_conversation_id);
