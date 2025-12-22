@@ -81,14 +81,35 @@ const connections = new Map();
 
 // WebSocket connection handler
 wss.on('connection', (ws, req) => {
-  const visitorId = uuidv4();
-  connections.set(visitorId, ws);
+  let visitorId = null;
   
-  console.log(`New WebSocket connection: ${visitorId}`);
+  console.log(`New WebSocket connection`);
   
   ws.on('message', async (data) => {
     try {
       const message = JSON.parse(data.toString());
+      
+      // Handle init message to set visitor ID
+      if (message.type === 'init' && message.visitorId) {
+        visitorId = message.visitorId;
+        connections.set(visitorId, ws);
+        console.log(`Visitor ID set: ${visitorId}`);
+        
+        ws.send(JSON.stringify({
+          type: 'system',
+          content: 'Connected to Cart Path Cleaning support',
+          visitorId
+        }));
+        return;
+      }
+      
+      // If no visitor ID yet, generate one
+      if (!visitorId) {
+        visitorId = uuidv4();
+        connections.set(visitorId, ws);
+        console.log(`Generated visitor ID: ${visitorId}`);
+      }
+      
       await handleChatMessage(ws, visitorId, message);
     } catch (error) {
       console.error('WebSocket message error:', error);
@@ -100,16 +121,11 @@ wss.on('connection', (ws, req) => {
   });
   
   ws.on('close', () => {
-    connections.delete(visitorId);
-    console.log(`WebSocket closed: ${visitorId}`);
+    if (visitorId) {
+      connections.delete(visitorId);
+      console.log(`WebSocket closed: ${visitorId}`);
+    }
   });
-  
-  // Send welcome message
-  ws.send(JSON.stringify({
-    type: 'system',
-    content: 'Connected to Cart Path Cleaning support',
-    visitorId
-  }));
 });
 
 async function handleChatMessage(ws, visitorId, message) {
