@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scheduled Visits - Cart Path Cleaning</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+    .header {
+      background: #10b981;
+      color: white;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+    }
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .nav-links a:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    .visits-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    .visit-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .visit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .visitor-info h3 {
+      font-size: 1.25rem;
+      margin-bottom: 0.25rem;
+    }
+    .visitor-info p {
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-confirmed { background: #d1fae5; color: #065f46; }
+    .status-completed { background: #e5e7eb; color: #374151; }
+    .status-cancelled { background: #fee2e2; color: #991b1b; }
+    .visit-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .detail-item {
+      display: flex;
+      align-items: start;
+      gap: 0.5rem;
+    }
+    .detail-icon {
+      color: #10b981;
+      margin-top: 0.25rem;
+    }
+    .detail-content {
+      flex: 1;
+    }
+    .detail-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+    }
+    .detail-value {
+      font-size: 0.875rem;
+      color: #111827;
+    }
+    .notes {
+      background: #f9fafb;
+      padding: 1rem;
+      border-radius: 6px;
+      margin-top: 1rem;
+    }
+    .notes-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e5e7eb;
+    }
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-confirm {
+      background: #10b981;
+      color: white;
+    }
+    .btn-confirm:hover {
+      background: #059669;
+    }
+    .btn-complete {
+      background: #6b7280;
+      color: white;
+    }
+    .btn-complete:hover {
+      background: #4b5563;
+    }
+    .btn-cancel {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .btn-cancel:hover {
+      background: #fecaca;
+    }
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #6b7280;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📅 Scheduled Visits</h1>
+    <div class="nav-links">
+      <a href="/admin.html">💬 Chats</a>
+      <a href="/scheduled-visits.html">📅 Visits</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="visits" class="visits-grid">
+      <div class="loading">Loading scheduled visits...</div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin;
+
+    async function loadVisits() {
+      try {
+        const response = await fetch(`${API_URL}/api/scheduled-visits`);
+        const visits = await response.json();
+        
+        const container = document.getElementById('visits');
+        
+        if (visits.length === 0) {
+          container.innerHTML = '<div class="empty-state">No scheduled visits yet</div>';
+          return;
+        }
+        
+        container.innerHTML = visits.map(visit => `
+          <div class="visit-card">
+            <div class="visit-header">
+              <div class="visitor-info">
+                <h3>${visit.visitor_name}</h3>
+                <p>${visit.visitor_email}${visit.visitor_phone ? ' • ' + visit.visitor_phone : ''}</p>
+              </div>
+              <span class="status-badge status-${visit.status}">${visit.status}</span>
+            </div>
+            
+            <div class="visit-details">
+              <div class="detail-item">
+                <span class="detail-icon">📅</span>
+                <div class="detail-content">
+                  <div class="detail-label">Date & Time</div>
+                  <div class="detail-value">${formatDate(visit.preferred_date)}<br>${visit.preferred_time}</div>
+                </div>
+              </div>
+              
+              <div class="detail-item">
+                <span class="detail-icon">📍</span>
+                <div class="detail-content">
+                  <div class="detail-label">Property Address</div>
+                  <div class="detail-value">${visit.property_address}</div>
+                </div>
+              </div>
+              
+              <div class="detail-item">
+                <span class="detail-icon">🏠</span>
+                <div class="detail-content">
+                  <div class="detail-label">Property Type</div>
+                  <div class="detail-value">${formatPropertyType(visit.property_type)}</div>
+                </div>
+              </div>
+            </div>
+            
+            ${visit.notes ? `
+              <div class="notes">
+                <div class="notes-label">Additional Notes</div>
+                <div>${visit.notes}</div>
+              </div>
+            ` : ''}
+            
+            ${visit.status === 'pending' ? `
+              <div class="actions">
+                <button class="btn btn-confirm" onclick="updateStatus('${visit.id}', 'confirmed')">
+                  ✓ Confirm Visit
+                </button>
+                <button class="btn btn-cancel" onclick="updateStatus('${visit.id}', 'cancelled')">
+                  ✗ Cancel
+                </button>
+              </div>
+            ` : visit.status === 'confirmed' ? `
+              <div class="actions">
+                <button class="btn btn-complete" onclick="updateStatus('${visit.id}', 'completed')">
+                  ✓ Mark Complete
+                </button>
+                <button class="btn btn-cancel" onclick="updateStatus('${visit.id}', 'cancelled')">
+                  ✗ Cancel
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load visits:', error);
+        document.getElementById('visits').innerHTML = '<div class="loading">Failed to load visits</div>';
+      }
+    }
+
+    async function updateStatus(visitId, status) {
+      try {
+        const response = await fetch(`${API_URL}/api/scheduled-visits/${visitId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        
+        if (response.ok) {
+          loadVisits();
+        }
+      } catch (error) {
+        console.error('Failed to update status:', error);
+        alert('Failed to update status');
+      }
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+
+    function formatPropertyType(type) {
+      const types = {
+        'golf-course': 'Golf Course',
+        'community': 'Community/HOA',
+        'commercial': 'Commercial',
+        'municipal': 'Municipal',
+        'other': 'Other'
+      };
+      return types[type] || type;
+    }
+
+    loadVisits();
+    setInterval(loadVisits, 60000); // Refresh every minute
+  </script>
+</body>
+</html>

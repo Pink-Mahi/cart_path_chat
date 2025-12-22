@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#10b981">
+  <link rel="manifest" href="/manifest.json">
+  <title>Chat Admin - Cart Path Cleaning</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+    .header {
+      background: #10b981;
+      color: white;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    .conversations-list {
+      display: grid;
+      gap: 1rem;
+    }
+    .conversation-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .conversation-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .conversation-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .visitor-name {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .status-active { background: #d1fae5; color: #065f46; }
+    .status-needs_human { background: #fef3c7; color: #92400e; }
+    .status-closed { background: #e5e7eb; color: #374151; }
+    .last-message {
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .conversation-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+    .chat-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    .chat-modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .chat-container {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-header {
+      padding: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .message {
+      max-width: 80%;
+      padding: 0.75rem;
+      border-radius: 12px;
+      word-wrap: break-word;
+    }
+    .message-visitor {
+      align-self: flex-start;
+      background: #f3f4f6;
+      color: #111827;
+    }
+    .message-bot, .message-admin {
+      align-self: flex-end;
+      background: #10b981;
+      color: white;
+    }
+    .chat-input-container {
+      padding: 1rem;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .chat-input {
+      flex: 1;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #10b981;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #059669;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <h1>💬 Chat Admin</h1>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="conversations" class="conversations-list">
+      <div class="loading">Loading conversations...</div>
+    </div>
+  </div>
+
+  <div id="chatModal" class="chat-modal">
+    <div class="chat-container">
+      <div class="chat-header">
+        <div>
+          <div class="visitor-name" id="modalVisitorName"></div>
+          <div style="font-size: 0.875rem; color: #6b7280;" id="modalVisitorEmail"></div>
+        </div>
+        <button class="btn btn-secondary" onclick="closeChat()">Close</button>
+      </div>
+      <div id="chatMessages" class="chat-messages"></div>
+      <div class="chat-input-container">
+        <input type="text" id="replyInput" class="chat-input" placeholder="Type your reply..." />
+        <button class="btn btn-primary" onclick="sendReply()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin;
+    let currentConversationId = null;
+
+    async function loadConversations() {
+      try {
+        const response = await fetch(`${API_URL}/api/conversations`);
+        const conversations = await response.json();
+        
+        const container = document.getElementById('conversations');
+        
+        if (conversations.length === 0) {
+          container.innerHTML = '<div class="loading">No conversations yet</div>';
+          return;
+        }
+        
+        container.innerHTML = conversations.map(conv => `
+          <div class="conversation-card" onclick="openChat('${conv.id}')">
+            <div class="conversation-header">
+              <div class="visitor-name">${conv.visitor_name || 'Anonymous'}</div>
+              <span class="status-badge status-${conv.status}">${conv.status.replace('_', ' ')}</span>
+            </div>
+            <div class="last-message">${conv.last_message || 'No messages yet'}</div>
+            <div class="conversation-meta">
+              <span>${conv.visitor_email || 'No email'}</span>
+              <span>${conv.message_count} messages</span>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load conversations:', error);
+        document.getElementById('conversations').innerHTML = '<div class="loading">Failed to load conversations</div>';
+      }
+    }
+
+    async function openChat(conversationId) {
+      currentConversationId = conversationId;
+      
+      try {
+        const response = await fetch(`${API_URL}/api/conversations/${conversationId}`);
+        const data = await response.json();
+        
+        document.getElementById('modalVisitorName').textContent = data.conversation.visitor_name || 'Anonymous';
+        document.getElementById('modalVisitorEmail').textContent = data.conversation.visitor_email || 'No email provided';
+        
+        const messagesContainer = document.getElementById('chatMessages');
+        messagesContainer.innerHTML = data.messages.map(msg => `
+          <div class="message message-${msg.sender}">
+            ${msg.content}
+          </div>
+        `).join('');
+        
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        document.getElementById('chatModal').classList.add('active');
+      } catch (error) {
+        console.error('Failed to load chat:', error);
+        alert('Failed to load chat');
+      }
+    }
+
+    function closeChat() {
+      document.getElementById('chatModal').classList.remove('active');
+      currentConversationId = null;
+      loadConversations();
+    }
+
+    async function sendReply() {
+      const input = document.getElementById('replyInput');
+      const content = input.value.trim();
+      
+      if (!content || !currentConversationId) return;
+      
+      try {
+        const response = await fetch(`${API_URL}/api/conversations/${currentConversationId}/reply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content })
+        });
+        
+        if (response.ok) {
+          input.value = '';
+          openChat(currentConversationId);
+        }
+      } catch (error) {
+        console.error('Failed to send reply:', error);
+        alert('Failed to send reply');
+      }
+    }
+
+    document.getElementById('replyInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendReply();
+    });
+
+    loadConversations();
+    setInterval(loadConversations, 30000);
+  </script>
+</body>
+</html>
