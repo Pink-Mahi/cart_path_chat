@@ -134,8 +134,8 @@ async function handleChatMessage(ws, visitorId, message) {
       if (to) {
         const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/admin.html` : null;
         const smsBody = link
-          ? `New website chat: "${content}"\nOpen: ${link}`
-          : `New website chat: "${content}"`;
+          ? `Cart Path Cleaning: New visitor message. Check admin panel: ${link}`
+          : `Cart Path Cleaning: New visitor message. Check admin panel.`;
 
         if (settings.notify_sms_new_chat) {
           try {
@@ -170,8 +170,8 @@ async function handleChatMessage(ws, visitorId, message) {
       if (to) {
         const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/admin.html` : null;
         const smsBody = link
-          ? `Chat needs a human now.\nMessage: "${content}"\nOpen: ${link}`
-          : `Chat needs a human now. Message: "${content}"`;
+          ? `Cart Path Cleaning: Human response needed. Check admin panel: ${link}`
+          : `Cart Path Cleaning: Human response needed. Check admin panel.`;
 
         if (settings.notify_sms_needs_human) {
           try {
@@ -183,7 +183,7 @@ async function handleChatMessage(ws, visitorId, message) {
 
         if (settings.notify_call_needs_human) {
           try {
-            await makeTwilioCall(to, 'Website chat needs a human response. Please check the admin panel.');
+            await makeTwilioCall(to, 'Cart Path Cleaning: Human response needed. Check the admin panel.');
           } catch (err) {
             console.error('Twilio call needs_human failed:', err);
           }
@@ -231,8 +231,8 @@ async function handleChatMessage(ws, visitorId, message) {
       if (to) {
         const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/admin.html` : null;
         const smsBody = link
-          ? `Chat needs a human now.\nMessage: "${content}"\nOpen: ${link}`
-          : `Chat needs a human now. Message: "${content}"`;
+          ? `Cart Path Cleaning: Human response needed. Check admin panel: ${link}`
+          : `Cart Path Cleaning: Human response needed. Check admin panel.`;
 
         if (settings.notify_sms_needs_human) {
           try {
@@ -244,7 +244,7 @@ async function handleChatMessage(ws, visitorId, message) {
 
         if (settings.notify_call_needs_human) {
           try {
-            await makeTwilioCall(to, 'Website chat needs a human response. Please check the admin panel.');
+            await makeTwilioCall(to, 'Cart Path Cleaning: Human response needed. Check the admin panel.');
           } catch (err) {
             console.error('Twilio call needs_human failed:', err);
           }
