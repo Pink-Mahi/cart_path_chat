@@ -43,7 +43,18 @@ export const getOrCreateConversation = async (visitorId, visitorName, visitorEma
     return await createConversation(visitorId, visitorName, visitorEmail);
   }
   
-  return result.rows[0];
+  const conversation = result.rows[0];
+  
+  // Update name/email if provided and not already set
+  if ((visitorName && !conversation.visitor_name) || (visitorEmail && !conversation.visitor_email)) {
+    const updateResult = await query(
+      'UPDATE conversations SET visitor_name = COALESCE($1, visitor_name), visitor_email = COALESCE($2, visitor_email) WHERE id = $3 RETURNING *',
+      [visitorName, visitorEmail, conversation.id]
+    );
+    return updateResult.rows[0];
+  }
+  
+  return conversation;
 };
 
 export const addMessage = async (conversationId, sender, content, metadata = {}) => {
