@@ -35,8 +35,8 @@ export const createConversation = async (visitorId, visitorName, visitorEmail) =
 
 export const getOrCreateConversation = async (visitorId, visitorName, visitorEmail) => {
   let result = await query(
-    'SELECT * FROM conversations WHERE visitor_id = $1 AND status = $2 ORDER BY created_at DESC LIMIT 1',
-    [visitorId, 'active']
+    "SELECT * FROM conversations WHERE visitor_id = $1 AND status <> 'closed' ORDER BY created_at DESC LIMIT 1",
+    [visitorId]
   );
   
   if (result.rows.length === 0) {

@@ -17,12 +17,14 @@ import {
 import { getChatResponse, shouldEscalateToHuman } from './ai/openai.js';
 import { sendHumanNeededNotification } from './utils/email.js';
 import { sendWhatsAppNotification, getBusinessWhatsAppLink } from './utils/whatsapp.js';
+import { sendTwilioSms, makeTwilioCall } from './utils/twilio.js';
 import {
   createScheduledVisit,
   getScheduledVisits,
   getScheduledVisit,
   updateScheduledVisitStatus
 } from './db/scheduling.js';
+import { getAdminSettings, updateAdminSettings } from './db/adminSettings.js';
 
 dotenv.config();
 
@@ -35,6 +37,11 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 const ADMIN_PANEL_USER = process.env.ADMIN_PANEL_USER;
 const ADMIN_PANEL_PASS = process.env.ADMIN_PANEL_PASS;
+const ADMIN_PANEL_URL =
+  process.env.ADMIN_PANEL_URL ||
+  process.env.COOLIFY_URL ||
+  (process.env.COOLIFY_FQDN ? `https://${process.env.COOLIFY_FQDN}` : null);
+const DEFAULT_ON_DUTY_PHONE = process.env.DEFAULT_ON_DUTY_PHONE;
 
 function requireAdminAuth(req, res, next) {
   if (!ADMIN_PANEL_USER || !ADMIN_PANEL_PASS) {
@@ -121,6 +128,31 @@ async function handleChatMessage(ws, visitorId, message) {
 
     if (isFirstVisitorMessage) {
       await sendWhatsAppNotification(conversation, content, 'new_chat');
+
+      const settings = await getAdminSettings();
+      const to = settings.on_duty_phone || DEFAULT_ON_DUTY_PHONE;
+      if (to) {
+        const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/admin.html` : null;
+        const smsBody = link
+          ? `New website chat: "${content}"\nOpen: ${link}`
+          : `New website chat: "${content}"`;
+
+        if (settings.notify_sms_new_chat) {
+          try {
+            await sendTwilioSms(to, smsBody);
+          } catch (err) {
+            console.error('Twilio SMS new_chat failed:', err);
+          }
+        }
+
+        if (settings.notify_call_new_chat) {
+          try {
+            await makeTwilioCall(to, 'New sales lead from website chat. Please check the admin panel.');
+          } catch (err) {
+            console.error('Twilio call new_chat failed:', err);
+          }
+        }
+      }
     }
     
     // Get conversation history
@@ -132,6 +164,32 @@ async function handleChatMessage(ws, visitorId, message) {
     if (needsEscalation) {
       await sendHumanNeededNotification(conversation, content);
       await sendWhatsAppNotification(conversation, content, 'human_needed');
+
+      const settings = await getAdminSettings();
+      const to = settings.on_duty_phone || DEFAULT_ON_DUTY_PHONE;
+      if (to) {
+        const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/admin.html` : null;
+        const smsBody = link
+          ? `Chat needs a human now.\nMessage: "${content}"\nOpen: ${link}`
+          : `Chat needs a human now. Message: "${content}"`;
+
+        if (settings.notify_sms_needs_human) {
+          try {
+            await sendTwilioSms(to, smsBody);
+          } catch (err) {
+            console.error('Twilio SMS needs_human failed:', err);
+          }
+        }
+
+        if (settings.notify_call_needs_human) {
+          try {
+            await makeTwilioCall(to, 'Website chat needs a human response. Please check the admin panel.');
+          } catch (err) {
+            console.error('Twilio call needs_human failed:', err);
+          }
+        }
+      }
+
       await updateConversationStatus(conversation.id, 'needs_human');
       
       const whatsappLink = getBusinessWhatsAppLink();
@@ -167,6 +225,31 @@ async function handleChatMessage(ws, visitorId, message) {
     if (needsHuman) {
       await sendHumanNeededNotification(conversation, content);
       await sendWhatsAppNotification(conversation, content, 'human_needed');
+
+      const settings = await getAdminSettings();
+      const to = settings.on_duty_phone || DEFAULT_ON_DUTY_PHONE;
+      if (to) {
+        const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/admin.html` : null;
+        const smsBody = link
+          ? `Chat needs a human now.\nMessage: "${content}"\nOpen: ${link}`
+          : `Chat needs a human now. Message: "${content}"`;
+
+        if (settings.notify_sms_needs_human) {
+          try {
+            await sendTwilioSms(to, smsBody);
+          } catch (err) {
+            console.error('Twilio SMS needs_human failed:', err);
+          }
+        }
+
+        if (settings.notify_call_needs_human) {
+          try {
+            await makeTwilioCall(to, 'Website chat needs a human response. Please check the admin panel.');
+          } catch (err) {
+            console.error('Twilio call needs_human failed:', err);
+          }
+        }
+      }
       await updateConversationStatus(conversation.id, 'needs_human');
     }
   } else if (type === 'schedule_visit') {
@@ -204,6 +287,27 @@ async function handleChatMessage(ws, visitorId, message) {
 }
 
 // REST API endpoints
+
+// Admin settings endpoints (protected)
+app.get('/api/admin-settings', requireAdminAuth, async (req, res) => {
+  try {
+    const settings = await getAdminSettings();
+    res.json(settings);
+  } catch (error) {
+    console.error('Error fetching admin settings:', error);
+    res.status(500).json({ error: 'Failed to fetch admin settings' });
+  }
+});
+
+app.patch('/api/admin-settings', requireAdminAuth, async (req, res) => {
+  try {
+    const updated = await updateAdminSettings(req.body || {});
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating admin settings:', error);
+    res.status(500).json({ error: 'Failed to update admin settings' });
+  }
+});
 
 // Get all conversations (for admin panel)
 app.get('/api/conversations', requireAdminAuth, async (req, res) => {

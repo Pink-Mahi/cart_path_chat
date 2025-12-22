@@ -185,6 +185,55 @@
       padding: 2rem;
       color: #6b7280;
     }
+    .settings-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+      display: grid;
+      gap: 0.75rem;
+    }
+    .settings-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+    .settings-row label {
+      font-size: 0.875rem;
+      color: #374151;
+      font-weight: 600;
+    }
+    .settings-input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    .settings-toggles {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.5rem;
+    }
+    .toggle {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      font-size: 0.9rem;
+      color: #374151;
+    }
+    .settings-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .settings-status {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-right: auto;
+    }
   </style>
 </head>
 <body>
@@ -199,6 +248,27 @@
   </div>
 
   <div class="container">
+    <div class="settings-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;">
+        <div style="font-weight:700;">📣 Notifications (Admin On-Duty)</div>
+        <div style="font-size:0.85rem;color:#6b7280;">Set the phone that receives SMS/calls</div>
+      </div>
+      <div class="settings-row">
+        <label for="onDutyPhone">On-duty phone (E.164, e.g. +15551234567)</label>
+        <input id="onDutyPhone" class="settings-input" type="tel" placeholder="+15551234567" />
+      </div>
+      <div class="settings-toggles">
+        <label class="toggle"><input id="smsNewChat" type="checkbox" /> SMS on new chat</label>
+        <label class="toggle"><input id="callNewChat" type="checkbox" /> Call on new chat</label>
+        <label class="toggle"><input id="smsNeedsHuman" type="checkbox" /> SMS when needs human</label>
+        <label class="toggle"><input id="callNeedsHuman" type="checkbox" /> Call when needs human</label>
+      </div>
+      <div class="settings-actions">
+        <div id="settingsStatus" class="settings-status"></div>
+        <button class="btn btn-secondary" onclick="loadAdminSettings()">Refresh</button>
+        <button class="btn btn-primary" onclick="saveAdminSettings()">Save</button>
+      </div>
+    </div>
     <div id="conversations" class="conversations-list">
       <div class="loading">Loading conversations...</div>
     </div>
@@ -224,6 +294,61 @@
   <script>
     const API_URL = window.location.origin;
     let currentConversationId = null;
+
+    async function loadAdminSettings() {
+      try {
+        const res = await fetch(`${API_URL}/api/admin-settings`);
+        const s = await res.json();
+
+        document.getElementById('onDutyPhone').value = s.on_duty_phone || '';
+        document.getElementById('smsNewChat').checked = !!s.notify_sms_new_chat;
+        document.getElementById('callNewChat').checked = !!s.notify_call_new_chat;
+        document.getElementById('smsNeedsHuman').checked = !!s.notify_sms_needs_human;
+        document.getElementById('callNeedsHuman').checked = !!s.notify_call_needs_human;
+        setSettingsStatus('Loaded');
+      } catch (e) {
+        console.error('Failed to load admin settings:', e);
+        setSettingsStatus('Failed to load');
+      }
+    }
+
+    async function saveAdminSettings() {
+      try {
+        const payload = {
+          on_duty_phone: document.getElementById('onDutyPhone').value.trim() || null,
+          notify_sms_new_chat: document.getElementById('smsNewChat').checked,
+          notify_call_new_chat: document.getElementById('callNewChat').checked,
+          notify_sms_needs_human: document.getElementById('smsNeedsHuman').checked,
+          notify_call_needs_human: document.getElementById('callNeedsHuman').checked
+        };
+
+        const res = await fetch(`${API_URL}/api/admin-settings`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          setSettingsStatus('Failed to save');
+          return;
+        }
+
+        setSettingsStatus('Saved');
+      } catch (e) {
+        console.error('Failed to save admin settings:', e);
+        setSettingsStatus('Failed to save');
+      }
+    }
+
+    function setSettingsStatus(text) {
+      const el = document.getElementById('settingsStatus');
+      el.textContent = text || '';
+      if (text) {
+        setTimeout(() => {
+          el.textContent = '';
+        }, 2500);
+      }
+    }
 
     async function loadConversations() {
       try {
@@ -316,7 +441,8 @@
     });
 
     loadConversations();
-    setInterval(loadConversations, 30000);
+    loadAdminSettings();
+    setInterval(loadConversations, 5000);
   </script>
 </body>
 </html>

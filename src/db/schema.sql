@@ -37,6 +37,17 @@ CREATE TABLE IF NOT EXISTS scheduled_visits (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS admin_settings (
+  id INTEGER PRIMARY KEY,
+  on_duty_phone VARCHAR(50),
+  notify_sms_new_chat BOOLEAN DEFAULT TRUE,
+  notify_call_new_chat BOOLEAN DEFAULT FALSE,
+  notify_sms_needs_human BOOLEAN DEFAULT TRUE,
+  notify_call_needs_human BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_conversations_visitor ON conversations(visitor_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status);
