@@ -272,6 +272,22 @@ async function handleChatMessage(ws, visitorId, message) {
 
       const scheduleMessage = `📅 Visit scheduled for ${content.preferredDate} at ${content.preferredTime}\n${content.propertyAddress}`;
       await sendWhatsAppNotification(conversation, scheduleMessage, 'scheduling');
+
+      // Send SMS notification for scheduled visit
+      const settings = await getAdminSettings();
+      const to = settings.on_duty_phone || DEFAULT_ON_DUTY_PHONE;
+      if (to) {
+        const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/scheduled-visits.html` : null;
+        const smsBody = link
+          ? `Cart Path Cleaning: Visit scheduled for ${content.preferredDate} at ${content.propertyAddress}. ${link}`
+          : `Cart Path Cleaning: Visit scheduled for ${content.preferredDate} at ${content.propertyAddress}.`;
+        
+        try {
+          await sendTwilioSms(to, smsBody);
+        } catch (err) {
+          console.error('Twilio SMS scheduled visit failed:', err);
+        }
+      }
       
       ws.send(JSON.stringify({
         type: 'system',
