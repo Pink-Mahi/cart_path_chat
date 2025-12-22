@@ -297,20 +297,33 @@ async function handleChatMessage(ws, visitorId, message) {
         notes: content.notes
       });
 
+      console.log('Call request created:', callRequest.id);
+
       const settings = await getAdminSettings();
       const to = settings.on_duty_phone || DEFAULT_ON_DUTY_PHONE;
+      console.log('Sending SMS to:', to);
+      console.log('Admin settings:', settings);
+      
       if (to) {
         const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/admin.html` : null;
         const smsBody = link
           ? `Cart Path Cleaning: Call back request from ${content.visitorName} at ${content.visitorPhone}. ${link}`
           : `Cart Path Cleaning: Call back request from ${content.visitorName} at ${content.visitorPhone}.`;
         
+        console.log('SMS body:', smsBody);
+        
         try {
           await sendTwilioSms(to, smsBody);
+          console.log('SMS sent successfully');
         } catch (err) {
           console.error('Twilio SMS callback failed:', err);
         }
+      } else {
+        console.error('No on-duty phone configured for SMS');
       }
+
+      // Add a message to the conversation so it's not anonymous
+      await addMessage(conversation.id, 'visitor', `Requested call back at ${content.visitorPhone}`);
 
       ws.send(JSON.stringify({
         type: 'system',
