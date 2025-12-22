@@ -4,6 +4,8 @@ import http from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import {
   getOrCreateConversation,
   addMessage,
@@ -300,8 +302,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Serve admin panel (we'll create this next)
-app.use(express.static('public'));
+// Serve admin panel
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, '../public')));
 
 server.listen(PORT, () => {
   console.log(`🚀 Chat server running on port ${PORT}`);
