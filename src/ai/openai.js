@@ -18,7 +18,15 @@ Your role:
 - Use simple language, avoid long explanations
 - Only use information from the knowledge base provided - don't make up details
 
-If you detect that the customer needs to speak with a human (complex questions, pricing discussions, scheduling), indicate this in your response.`;
+IMPORTANT: If you detect that the customer needs to speak with a human for any of these reasons:
+- Complex questions you cannot fully answer
+- Specific pricing discussions or quotes
+- Scheduling service appointments
+- Complaints or concerns
+- Requests for detailed property assessments
+- Questions requiring personalized advice
+
+You MUST include the exact phrase "connect you with our team" in your response to trigger human escalation.`;
 
 export async function getChatResponse(messages, conversationHistory = []) {
   try {
@@ -63,11 +71,29 @@ export async function shouldEscalateToHuman(message, conversationHistory) {
   const escalationKeywords = [
     'speak to someone',
     'talk to human',
+    'talk to a human',
     'real person',
+    'actual person',
     'customer service',
     'complaint',
     'urgent',
-    'emergency'
+    'emergency',
+    'schedule',
+    'book',
+    'appointment',
+    'quote',
+    'pricing',
+    'how much',
+    'cost',
+    'price',
+    'estimate',
+    'representative',
+    'agent',
+    'manager',
+    'call me',
+    'phone call',
+    'speak with',
+    'talk with'
   ];
 
   const messageLower = message.toLowerCase();
