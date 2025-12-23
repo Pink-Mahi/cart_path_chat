@@ -165,6 +165,10 @@ export const reactivateUser = async (id) => {
   );
 };
 
+export const deleteUserPermanently = async (id) => {
+  await query('DELETE FROM users WHERE id = $1', [id]);
+};
+
 export const isUserAvailableForNotification = (user) => {
   // Check if manually muted
   if (user.is_muted) {

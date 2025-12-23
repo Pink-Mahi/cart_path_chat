@@ -9,7 +9,8 @@ import {
   updateUserPassword,
   updateUserNotificationSettings,
   deactivateUser,
-  reactivateUser
+  reactivateUser,
+  deleteUserPermanently
 } from '../db/users.js';
 import { query } from '../db/database.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
@@ -246,6 +247,17 @@ router.post('/:id/reactivate', requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Reactivate user error:', error);
     res.status(500).json({ error: 'Failed to reactivate user' });
+  }
+});
+
+// Permanently delete user (admin only)
+router.delete('/:id/permanent', requireAdmin, async (req, res) => {
+  try {
+    await deleteUserPermanently(req.params.id);
+    res.json({ message: 'User permanently deleted' });
+  } catch (error) {
+    console.error('Permanent delete user error:', error);
+    res.status(500).json({ error: 'Failed to permanently delete user' });
   }
 });
 

@@ -310,9 +310,13 @@
             <div class="user-actions">
               ${user.is_active ? `
                 <button class="btn btn-primary" onclick="editUser('${user.id}')">Edit</button>
-                ${currentUser.id !== user.id ? `<button class="btn btn-danger" onclick="deactivateUser('${user.id}', '${user.name}')">Deactivate</button>` : ''}
+                ${currentUser.id !== user.id ? `
+                  <button class="btn btn-danger" onclick="deactivateUser('${user.id}', '${user.name}')">Deactivate</button>
+                  <button class="btn btn-danger" onclick="deleteUser('${user.id}', '${user.name}')" style="background: #991b1b;">Delete Permanently</button>
+                ` : ''}
               ` : `
                 <button class="btn btn-primary" onclick="reactivateUser('${user.id}', '${user.name}')">Reactivate</button>
+                ${currentUser.id !== user.id ? `<button class="btn btn-danger" onclick="deleteUser('${user.id}', '${user.name}')" style="background: #991b1b;">Delete Permanently</button>` : ''}
               `}
             </div>
           </div>
@@ -461,6 +465,43 @@
       } catch (error) {
         console.error('Failed to reactivate user:', error);
         alert('Failed to reactivate user. Please try again.');
+      }
+    }
+
+    async function deleteUser(userId, userName) {
+      if (!confirm(`⚠️ PERMANENTLY DELETE ${userName}?\n\nThis will remove all their data from the database.\nThis action CANNOT be undone!\n\nType the user's name to confirm.`)) {
+        return;
+      }
+
+      const confirmation = prompt(`Type "${userName}" to confirm permanent deletion:`);
+      if (confirmation !== userName) {
+        alert('Deletion cancelled - name did not match.');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/users/${userId}/permanent`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Delete failed:', response.status, errorData);
+          
+          if (response.status === 403) {
+            alert('You do not have permission to delete users. Admin access required.');
+          } else {
+            alert(`Failed to delete user: ${errorData.error || 'Unknown error'}`);
+          }
+          return;
+        }
+
+        alert(`${userName} has been permanently deleted.`);
+        loadUsers();
+      } catch (error) {
+        console.error('Failed to delete user:', error);
+        alert('Failed to delete user. Please try again.');
       }
     }
 
