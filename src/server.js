@@ -414,11 +414,24 @@ app.patch('/api/conversations/:id/status', requireAdminAuth, async (req, res) =>
 app.delete('/api/conversations/:id', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    await query('DELETE FROM conversations WHERE id = $1', [id]);
+    
+    // Delete related records first if CASCADE isn't working
+    await query('DELETE FROM messages WHERE conversation_id = $1', [id]);
+    await query('DELETE FROM scheduled_visits WHERE conversation_id = $1', [id]);
+    await query('DELETE FROM call_requests WHERE conversation_id = $1', [id]);
+    await query('UPDATE admin_presence SET current_conversation_id = NULL WHERE current_conversation_id = $1', [id]);
+    
+    // Now delete the conversation
+    const result = await query('DELETE FROM conversations WHERE id = $1 RETURNING *', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+    
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting conversation:', error);
-    res.status(500).json({ error: 'Failed to delete conversation' });
+    res.status(500).json({ error: 'Failed to delete conversation', details: error.message });
   }
 });
 
