@@ -410,6 +410,18 @@ app.patch('/api/conversations/:id/status', requireAdminAuth, async (req, res) =>
   }
 });
 
+// Delete conversation
+app.delete('/api/conversations/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await query('DELETE FROM conversations WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting conversation:', error);
+    res.status(500).json({ error: 'Failed to delete conversation' });
+  }
+});
+
 // Scheduling endpoints
 app.get('/api/scheduled-visits', requireAdminAuth, async (req, res) => {
   try {
@@ -450,6 +462,18 @@ app.patch('/api/scheduled-visits/:id/status', requireAdminAuth, async (req, res)
   }
 });
 
+// Delete scheduled visit
+app.delete('/api/scheduled-visits/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await query('DELETE FROM scheduled_visits WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting visit:', error);
+    res.status(500).json({ error: 'Failed to delete visit' });
+  }
+});
+
 // Call requests endpoints
 app.get('/api/call-requests', requireAdminAuth, async (req, res) => {
   try {
@@ -484,6 +508,18 @@ app.patch('/api/call-requests/:id/status', requireAdminAuth, async (req, res) =>
   } catch (error) {
     console.error('Error updating call request status:', error);
     res.status(500).json({ error: 'Failed to update call request status' });
+  }
+});
+
+// Delete call request
+app.delete('/api/call-requests/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await query('DELETE FROM call_requests WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting call request:', error);
+    res.status(500).json({ error: 'Failed to delete call request' });
   }
 });
 

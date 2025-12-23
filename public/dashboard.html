@@ -577,19 +577,22 @@
             `<div class="assigned-to">👤 ${conv.assigned_to_name}</div>` : '';
           
           return `
-            <div class="conversation-card" onclick="openConversation('${conv.id}')">
-              <div class="conversation-header">
-                <div>
-                  <div class="visitor-name">${conv.visitor_name || 'Anonymous'}</div>
-                  ${assignedInfo}
+            <div class="conversation-card" style="position: relative;">
+              <div onclick="openConversation('${conv.id}')" style="cursor: pointer;">
+                <div class="conversation-header">
+                  <div>
+                    <div class="visitor-name">${conv.visitor_name || 'Anonymous'}</div>
+                    ${assignedInfo}
+                  </div>
+                  <span class="status-badge status-${conv.status}">${statusText}</span>
                 </div>
-                <span class="status-badge status-${conv.status}">${statusText}</span>
+                <div class="last-message">${conv.last_message || 'No messages yet'}</div>
+                <div class="conversation-meta">
+                  <span>${conv.visitor_email || 'No email'}</span>
+                  <span>${conv.message_count} messages</span>
+                </div>
               </div>
-              <div class="last-message">${conv.last_message || 'No messages yet'}</div>
-              <div class="conversation-meta">
-                <span>${conv.visitor_email || 'No email'}</span>
-                <span>${conv.message_count} messages</span>
-              </div>
+              <button onclick="event.stopPropagation(); deleteConversation('${conv.id}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: #ef4444; color: white; border: none; border-radius: 4px; padding: 0.25rem 0.5rem; cursor: pointer; font-size: 0.75rem; opacity: 0.8;" title="Delete conversation">🗑️</button>
             </div>
           `;
         }).join('');
@@ -610,16 +613,19 @@
         }
 
         container.innerHTML = visits.map(visit => `
-          <div class="conversation-card" onclick="openVisitDetail('${visit.id}')">
-            <div class="conversation-header">
-              <div class="visitor-name">${visit.visitor_name}</div>
-              <span class="status-badge status-${visit.status}">${visit.status}</span>
+          <div class="conversation-card" style="position: relative;">
+            <div onclick="openVisitDetail('${visit.id}')" style="cursor: pointer;">
+              <div class="conversation-header">
+                <div class="visitor-name">${visit.visitor_name}</div>
+                <span class="status-badge status-${visit.status}">${visit.status}</span>
+              </div>
+              <div class="last-message">📅 ${new Date(visit.preferred_date).toLocaleDateString()} at ${visit.preferred_time}</div>
+              <div class="conversation-meta">
+                <span>${visit.visitor_email}</span>
+                <span>${visit.visitor_phone || 'No phone'}</span>
+              </div>
             </div>
-            <div class="last-message">📅 ${new Date(visit.preferred_date).toLocaleDateString()} at ${visit.preferred_time}</div>
-            <div class="conversation-meta">
-              <span>${visit.visitor_email}</span>
-              <span>${visit.visitor_phone || 'No phone'}</span>
-            </div>
+            <button onclick="event.stopPropagation(); deleteVisit('${visit.id}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: #ef4444; color: white; border: none; border-radius: 4px; padding: 0.25rem 0.5rem; cursor: pointer; font-size: 0.75rem; opacity: 0.8;" title="Delete visit">🗑️</button>
           </div>
         `).join('');
       } catch (error) {
@@ -639,16 +645,19 @@
         }
 
         container.innerHTML = calls.map(call => `
-          <div class="conversation-card" onclick="openCallDetail('${call.id}')">
-            <div class="conversation-header">
-              <div class="visitor-name">${call.visitor_name}</div>
-              <span class="status-badge status-${call.status}">${call.status}</span>
+          <div class="conversation-card" style="position: relative;">
+            <div onclick="openCallDetail('${call.id}')" style="cursor: pointer;">
+              <div class="conversation-header">
+                <div class="visitor-name">${call.visitor_name}</div>
+                <span class="status-badge status-${call.status}">${call.status}</span>
+              </div>
+              <div class="last-message">📞 ${call.visitor_phone}</div>
+              <div class="conversation-meta">
+                <span>${call.visitor_email || 'No email'}</span>
+                <span>${new Date(call.created_at).toLocaleString()}</span>
+              </div>
             </div>
-            <div class="last-message">📞 ${call.visitor_phone}</div>
-            <div class="conversation-meta">
-              <span>${call.visitor_email || 'No email'}</span>
-              <span>${new Date(call.created_at).toLocaleString()}</span>
-            </div>
+            <button onclick="event.stopPropagation(); deleteCallRequest('${call.id}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: #ef4444; color: white; border: none; border-radius: 4px; padding: 0.25rem 0.5rem; cursor: pointer; font-size: 0.75rem; opacity: 0.8;" title="Delete call request">🗑️</button>
           </div>
         `).join('');
       } catch (error) {
@@ -1101,6 +1110,72 @@
         openConversation(currentConversationId);
       } catch (error) {
         console.error('Failed to send reply:', error);
+      }
+    }
+
+    async function deleteConversation(id) {
+      if (!confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/conversations/${id}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          loadContent();
+        } else {
+          alert('Failed to delete conversation');
+        }
+      } catch (error) {
+        console.error('Failed to delete conversation:', error);
+        alert('Failed to delete conversation');
+      }
+    }
+
+    async function deleteVisit(id) {
+      if (!confirm('Are you sure you want to delete this scheduled visit? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/scheduled-visits/${id}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          loadContent();
+        } else {
+          alert('Failed to delete visit');
+        }
+      } catch (error) {
+        console.error('Failed to delete visit:', error);
+        alert('Failed to delete visit');
+      }
+    }
+
+    async function deleteCallRequest(id) {
+      if (!confirm('Are you sure you want to delete this call request? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/call-requests/${id}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          loadContent();
+        } else {
+          alert('Failed to delete call request');
+        }
+      } catch (error) {
+        console.error('Failed to delete call request:', error);
+        alert('Failed to delete call request');
       }
     }
 
