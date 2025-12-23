@@ -55,6 +55,8 @@ INSERT INTO knowledge_base (category, question, answer, is_active) VALUES
 -- Pricing & Quotes
 ('Pricing', 'How much does it cost?', 'Pricing depends on the size and condition of your property. We offer free consultations and site assessments. Request a quote through our chat or schedule a callback to discuss your specific needs.', true),
 ('Pricing', 'Do you offer free quotes?', 'Yes! We provide free consultations and site assessments. Reach out through our chat to get started.', true),
+('Pricing', 'Do you require a deposit to schedule service?', 'Yes, we require a 25% deposit at the time of accepting the quote to secure your place on our schedule. This ensures your preferred dates are reserved for your project.', true),
+('Pricing', 'How do I secure a spot on your schedule?', 'Once you accept our quote, a 25% deposit is required to reserve your place on the schedule. This guarantees we''ll be there on your preferred dates.', true),
 
 -- Scheduling & Process
 ('Scheduling', 'How do I get started?', 'Simple 4-step process: Contact us for a free consultation and site assessment, Schedule a convenient time that works with your operations, We arrive and complete the job quickly and professionally, Enjoy pristine, sparkling clean paths with zero disruption.', true),
