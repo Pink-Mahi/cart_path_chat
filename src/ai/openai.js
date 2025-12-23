@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
+import { getKnowledgeBaseAsContext } from '../db/knowledgeBase.js';
 
 dotenv.config();
 
@@ -7,27 +8,28 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are a helpful customer service assistant for Cart Path Cleaning, a professional cart path and sidewalk cleaning service.
-
-Company Information:
-- We specialize in cleaning golf course cart paths and sidewalks
-- We use a patent-pending cleaning system that conserves water and minimizes disruption
-- We serve golf courses, communities, and commercial properties
-- Our process is faster, uses less water, and causes low disruption
+const BASE_SYSTEM_PROMPT = `You are a helpful customer service assistant for Cart Path Cleaning, a professional cart path and sidewalk cleaning service.
 
 Your role:
-- Answer questions about our services professionally and helpfully
+- Answer questions about our services professionally and helpfully using the knowledge base provided
 - Keep responses SHORT and conversational (2-3 sentences max)
 - If asked about pricing, briefly mention we need property details and suggest using the contact form
 - Be friendly and casual, like texting a helpful friend
 - Use simple language, avoid long explanations
+- Only use information from the knowledge base provided - don't make up details
 
 If you detect that the customer needs to speak with a human (complex questions, pricing discussions, scheduling), indicate this in your response.`;
 
 export async function getChatResponse(messages, conversationHistory = []) {
   try {
+    // Get dynamic knowledge base
+    const knowledgeContext = await getKnowledgeBaseAsContext();
+    
+    // Combine base prompt with knowledge base
+    const systemPrompt = BASE_SYSTEM_PROMPT + knowledgeContext;
+    
     const formattedMessages = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: systemPrompt },
       ...conversationHistory.map(msg => ({
         role: msg.sender === 'visitor' ? 'user' : 'assistant',
         content: msg.content

@@ -572,6 +572,10 @@ app.use('/api/users', userRoutes);
 import teamChatRoutes from './routes/teamChat.js';
 app.use('/api/team-chat', teamChatRoutes);
 
+// Knowledge base routes
+import knowledgeBaseRoutes from './routes/knowledgeBase.js';
+app.use('/api/knowledge-base', knowledgeBaseRoutes);
+
 // Conversation assignment endpoints
 app.post('/api/conversations/:id/assign', requireAuth, async (req, res) => {
   try {

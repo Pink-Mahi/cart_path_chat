@@ -370,6 +370,7 @@
     <div class="dashboard-header">
       <div class="header-title">💬 Cart Path Cleaning - Admin Dashboard</div>
       <div class="header-actions">
+        <button class="header-btn" onclick="window.location.href='/knowledge-base.html'" id="knowledgeBaseBtn" style="display: none;">🤖 AI Knowledge</button>
         <button class="header-btn" onclick="window.location.href='/canned-responses.html'">💬 Quick Replies</button>
         <button class="header-btn" onclick="window.location.href='/my-settings.html'">⚙️ Settings</button>
         <button class="header-btn" onclick="logout()">Logout</button>
@@ -1292,6 +1293,11 @@
     async function init() {
       const authenticated = await checkAuth();
       if (authenticated) {
+        // Show AI Knowledge button for admins only
+        if (currentUser && currentUser.role === 'admin') {
+          document.getElementById('knowledgeBaseBtn').style.display = 'inline-block';
+        }
+        
         loadContent();
         // Wait a bit for currentUser to be set before loading team
         setTimeout(() => {
