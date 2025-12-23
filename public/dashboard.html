@@ -468,6 +468,10 @@
             <div id="visitModalAddress" style="color: #6b7280; margin-top: 0.25rem;"></div>
           </div>
           <div>
+            <strong>🏠 Property Type:</strong>
+            <div id="visitModalPropertyType" style="color: #6b7280; margin-top: 0.25rem;"></div>
+          </div>
+          <div>
             <strong>📝 Additional Details:</strong>
             <div id="visitModalDetails" style="color: #6b7280; margin-top: 0.25rem;"></div>
           </div>
@@ -890,12 +894,14 @@
           assignedToEl.textContent = `👤 Assigned to: ${data.conversation.assigned_to_name || 'Unknown'}`;
           assignBtn.style.display = 'none';
           resolveBtn.style.display = data.conversation.status !== 'resolved' ? 'inline-block' : 'none';
+          // Show reassign dropdown for both admins and agents
           reassignSelect.style.display = 'inline-block';
         } else {
           assignedToEl.textContent = '⚠️ Unassigned';
           assignBtn.style.display = 'inline-block';
           resolveBtn.style.display = 'none';
-          reassignSelect.style.display = 'none';
+          // Allow agents to reassign unassigned conversations too
+          reassignSelect.style.display = 'inline-block';
         }
         
         const messagesContainer = document.getElementById('modalMessages');
@@ -933,6 +939,7 @@
         document.getElementById('visitModalDateTime').textContent = `${new Date(visit.preferred_date).toLocaleDateString()} at ${visit.preferred_time}`;
         document.getElementById('visitModalPhone').textContent = visit.visitor_phone || 'No phone provided';
         document.getElementById('visitModalAddress').textContent = visit.property_address || 'No address provided';
+        document.getElementById('visitModalPropertyType').textContent = visit.property_type || 'Not specified';
         document.getElementById('visitModalDetails').textContent = visit.notes || 'No additional details';
         
         const statusBadge = document.getElementById('visitModalStatus');
