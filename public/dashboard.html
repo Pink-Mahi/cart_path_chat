@@ -1053,8 +1053,8 @@
         if (Array.isArray(replies) && replies.length > 0) {
           replies.forEach(reply => {
             const option = document.createElement('option');
-            option.value = reply.content;
-            option.textContent = reply.title;
+            option.value = reply.message;
+            option.textContent = reply.shortcut;
             select.appendChild(option);
           });
           console.log(`Loaded ${replies.length} quick replies`);
