@@ -85,24 +85,25 @@ const connections = new Map();
 // WebSocket connection handler
 wss.on('connection', (ws, req) => {
   let visitorId = null;
+  let isDashboard = false;
   
-  // Generate a connection ID immediately for dashboard connections
+  // Generate a connection ID immediately for all connections
   const connectionId = uuidv4();
   connections.set(connectionId, ws);
-  console.log(`New WebSocket connection: ${connectionId}`);
+  console.log(`New WebSocket connection: ${connectionId}, total connections: ${connections.size}`);
   
   ws.on('message', async (data) => {
     try {
       const message = JSON.parse(data.toString());
       
-      // Handle init message to set visitor ID
+      // Handle init message to set visitor ID (from chat widget)
       if (message.type === 'init' && message.visitorId) {
-        // Remove the temporary connection ID
+        // This is a chat widget connection
         connections.delete(connectionId);
         
         visitorId = message.visitorId;
         connections.set(visitorId, ws);
-        console.log(`Visitor ID set: ${visitorId}, removed temp ID: ${connectionId}`);
+        console.log(`Chat widget connected: ${visitorId}, removed temp ID: ${connectionId}, total connections: ${connections.size}`);
         
         ws.send(JSON.stringify({
           type: 'system',
@@ -112,12 +113,18 @@ wss.on('connection', (ws, req) => {
         return;
       }
       
-      // If no visitor ID yet, generate one (but keep connection in map)
-      if (!visitorId && message.type !== 'typing') {
+      // If this connection hasn't identified itself and sends a non-init message, it's the dashboard
+      if (!visitorId && !isDashboard && message.type !== 'init') {
+        isDashboard = true;
+        console.log(`Dashboard connection identified: ${connectionId}, total connections: ${connections.size}`);
+      }
+      
+      // If no visitor ID yet and not dashboard, generate one for chat messages
+      if (!visitorId && !isDashboard && message.type === 'chat') {
         visitorId = uuidv4();
         connections.delete(connectionId);
         connections.set(visitorId, ws);
-        console.log(`Generated visitor ID: ${visitorId}, removed temp ID: ${connectionId}`);
+        console.log(`Generated visitor ID: ${visitorId}, removed temp ID: ${connectionId}, total connections: ${connections.size}`);
       }
       
       await handleChatMessage(ws, visitorId || connectionId, message);
@@ -133,10 +140,10 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     if (visitorId) {
       connections.delete(visitorId);
-      console.log(`WebSocket closed: ${visitorId}`);
+      console.log(`WebSocket closed: ${visitorId}, total connections: ${connections.size}`);
     } else {
       connections.delete(connectionId);
-      console.log(`WebSocket closed: ${connectionId}`);
+      console.log(`WebSocket closed: ${connectionId}, total connections: ${connections.size}`);
     }
   });
 });
