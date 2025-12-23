@@ -668,8 +668,19 @@ app.post('/api/public/contact-submissions', async (req, res) => {
     });
     console.log('✅ Contact submission created:', submission.id);
 
-    // Notify admins about new contact submission
+    // Notify admins about new contact submission (SMS + WhatsApp)
+    const contactMessage = `📧 New contact form submission from ${visitorName}\n${organizationType || 'Organization'}\nPhone: ${visitorPhone}\nMessage: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`;
     await notifyAdminsNewChat(visitorName, ADMIN_PANEL_URL);
+    
+    // Send SMS to available admins
+    const activeAdmins = await getActiveAdmins();
+    for (const admin of activeAdmins) {
+      const isAvailable = await isUserAvailableForNotification(admin.id);
+      if (isAvailable && admin.notify_sms && admin.phone_number) {
+        await sendTwilioSms(admin.phone_number, contactMessage);
+        console.log(`SMS sent to ${admin.name} for contact submission`);
+      }
+    }
 
     console.log('✅ Public contact submission complete - submissionId:', submission.id);
     res.json({ success: true, submissionId: submission.id });
