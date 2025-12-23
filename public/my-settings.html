@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Settings - Cart Path Cleaning</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+    .header {
+      background: #10b981;
+      color: white;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+    }
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .nav-links a:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    .settings-card {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+    }
+    .settings-card h2 {
+      margin-bottom: 1.5rem;
+      color: #111827;
+    }
+    .settings-section {
+      margin-bottom: 2rem;
+    }
+    .settings-section:last-child {
+      margin-bottom: 0;
+    }
+    .settings-section h3 {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      color: #374151;
+    }
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      font-size: 0.875rem;
+      color: #374151;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .checkbox-item input[type="checkbox"] {
+      width: auto;
+    }
+    .schedule-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    .schedule-day {
+      display: grid;
+      grid-template-columns: 120px 1fr 1fr auto;
+      gap: 1rem;
+      align-items: center;
+      padding: 0.75rem;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+    .schedule-day label {
+      font-weight: 500;
+      margin: 0;
+    }
+    .schedule-day input[type="time"] {
+      padding: 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+    }
+    .quick-mute-buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .mute-btn {
+      padding: 1rem;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      font-weight: 500;
+    }
+    .mute-btn:hover {
+      border-color: #10b981;
+      background: #f0fdf4;
+    }
+    .mute-btn.active {
+      border-color: #ef4444;
+      background: #fef2f2;
+      color: #ef4444;
+    }
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #10b981;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #059669;
+    }
+    .status-message {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .status-message.success {
+      background: #d1fae5;
+      color: #065f46;
+      display: block;
+    }
+    .status-message.error {
+      background: #fee2e2;
+      color: #991b1b;
+      display: block;
+    }
+    .current-status {
+      padding: 1rem;
+      background: #f0fdf4;
+      border-left: 4px solid #10b981;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+    .current-status.muted {
+      background: #fef2f2;
+      border-left-color: #ef4444;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <h1>⚙️ My Settings</h1>
+      <div class="nav-links">
+        <a href="/admin.html">💬 Chats</a>
+        <a href="/scheduled-visits.html">📅 Visits</a>
+        <a href="/call-requests.html">📞 Call Requests</a>
+        <a href="/canned-responses.html">💬 Quick Replies</a>
+        <a href="/team.html">👥 Team</a>
+        <a href="/my-settings.html">⚙️ Settings</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="statusMessage" class="status-message"></div>
+
+    <div id="currentStatus" class="current-status">
+      <strong>Current Status:</strong> <span id="statusText">Loading...</span>
+    </div>
+
+    <!-- Quick Mute Section -->
+    <div class="settings-card">
+      <h2>🔕 Quick Mute</h2>
+      <p style="color: #6b7280; margin-bottom: 1rem;">Temporarily disable notifications</p>
+      
+      <div class="quick-mute-buttons">
+        <button class="mute-btn" onclick="quickMute('lunch')">
+          🍽️ Out to Lunch<br>
+          <small style="color: #6b7280;">Mute for 1 hour</small>
+        </button>
+        <button class="mute-btn" onclick="quickMute('day')">
+          🏠 Off Work Today<br>
+          <small style="color: #6b7280;">Until tomorrow 9am</small>
+        </button>
+        <button class="mute-btn" onclick="quickMute(null)">
+          🔔 Unmute<br>
+          <small style="color: #6b7280;">Resume notifications</small>
+        </button>
+      </div>
+    </div>
+
+    <!-- Notification Preferences -->
+    <div class="settings-card">
+      <h2>📱 Notification Preferences</h2>
+      
+      <div class="form-group">
+        <label for="phoneNumber">Phone Number (E.164 format)</label>
+        <input type="tel" id="phoneNumber" placeholder="+13609071807">
+      </div>
+
+      <div class="settings-section">
+        <h3>Notification Methods</h3>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" id="notifySms">
+            <span>📱 SMS Notifications</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="notifyCall">
+            <span>📞 Voice Call Notifications</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="notifyInApp">
+            <span>🔔 In-App Notifications</span>
+          </label>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveNotificationSettings()">Save Notification Settings</button>
+    </div>
+
+    <!-- Work Schedule -->
+    <div class="settings-card">
+      <h2>📅 Work Schedule</h2>
+      <p style="color: #6b7280; margin-bottom: 1.5rem;">Set your availability to control when you receive notifications</p>
+
+      <div class="schedule-grid">
+        <div class="schedule-day">
+          <label>Monday</label>
+          <input type="time" id="monday_start" value="09:00">
+          <input type="time" id="monday_end" value="17:00">
+          <label class="checkbox-item">
+            <input type="checkbox" id="monday_enabled" checked>
+            <span>On</span>
+          </label>
+        </div>
+
+        <div class="schedule-day">
+          <label>Tuesday</label>
+          <input type="time" id="tuesday_start" value="09:00">
+          <input type="time" id="tuesday_end" value="17:00">
+          <label class="checkbox-item">
+            <input type="checkbox" id="tuesday_enabled" checked>
+            <span>On</span>
+          </label>
+        </div>
+
+        <div class="schedule-day">
+          <label>Wednesday</label>
+          <input type="time" id="wednesday_start" value="09:00">
+          <input type="time" id="wednesday_end" value="17:00">
+          <label class="checkbox-item">
+            <input type="checkbox" id="wednesday_enabled" checked>
+            <span>On</span>
+          </label>
+        </div>
+
+        <div class="schedule-day">
+          <label>Thursday</label>
+          <input type="time" id="thursday_start" value="09:00">
+          <input type="time" id="thursday_end" value="17:00">
+          <label class="checkbox-item">
+            <input type="checkbox" id="thursday_enabled" checked>
+            <span>On</span>
+          </label>
+        </div>
+
+        <div class="schedule-day">
+          <label>Friday</label>
+          <input type="time" id="friday_start" value="09:00">
+          <input type="time" id="friday_end" value="17:00">
+          <label class="checkbox-item">
+            <input type="checkbox" id="friday_enabled" checked>
+            <span>On</span>
+          </label>
+        </div>
+
+        <div class="schedule-day">
+          <label>Saturday</label>
+          <input type="time" id="saturday_start" value="09:00">
+          <input type="time" id="saturday_end" value="17:00">
+          <label class="checkbox-item">
+            <input type="checkbox" id="saturday_enabled">
+            <span>On</span>
+          </label>
+        </div>
+
+        <div class="schedule-day">
+          <label>Sunday</label>
+          <input type="time" id="sunday_start" value="09:00">
+          <input type="time" id="sunday_end" value="17:00">
+          <label class="checkbox-item">
+            <input type="checkbox" id="sunday_enabled">
+            <span>On</span>
+          </label>
+        </div>
+
+        <div class="schedule-day">
+          <label>Lunch Break</label>
+          <input type="time" id="lunch_break_start" value="12:00">
+          <input type="time" id="lunch_break_end" value="13:00">
+          <label class="checkbox-item">
+            <input type="checkbox" id="lunch_break_enabled">
+            <span>On</span>
+          </label>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveWorkSchedule()" style="margin-top: 1.5rem;">Save Work Schedule</button>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin;
+    let currentUser = null;
+
+    async function checkAuth() {
+      try {
+        const response = await fetch(`${API_URL}/api/auth/me`, {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          window.location.href = '/login.html';
+          return false;
+        }
+
+        currentUser = await response.json();
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = '/login.html';
+        return false;
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const response = await fetch(`${API_URL}/api/auth/me`, {
+          credentials: 'include'
+        });
+        const user = await response.json();
+
+        // Load notification settings
+        document.getElementById('phoneNumber').value = user.phone_number || '';
+        document.getElementById('notifySms').checked = user.notify_sms;
+        document.getElementById('notifyCall').checked = user.notify_call;
+        document.getElementById('notifyInApp').checked = user.notify_in_app;
+
+        // Load work schedule
+        if (user.work_schedule) {
+          const schedule = user.work_schedule;
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+          
+          days.forEach(day => {
+            if (schedule[day]) {
+              document.getElementById(`${day}_start`).value = schedule[day].start || '09:00';
+              document.getElementById(`${day}_end`).value = schedule[day].end || '17:00';
+              document.getElementById(`${day}_enabled`).checked = schedule[day].enabled || false;
+            }
+          });
+
+          if (schedule.lunch_break) {
+            document.getElementById('lunch_break_start').value = schedule.lunch_break.start || '12:00';
+            document.getElementById('lunch_break_end').value = schedule.lunch_break.end || '13:00';
+            document.getElementById('lunch_break_enabled').checked = schedule.lunch_break.enabled || false;
+          }
+        }
+
+        // Update status display
+        updateStatusDisplay(user);
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+        showMessage('Failed to load settings', 'error');
+      }
+    }
+
+    function updateStatusDisplay(user) {
+      const statusDiv = document.getElementById('currentStatus');
+      const statusText = document.getElementById('statusText');
+
+      if (user.is_muted) {
+        statusDiv.classList.add('muted');
+        if (user.muted_until) {
+          const until = new Date(user.muted_until);
+          statusText.textContent = `🔕 Muted until ${until.toLocaleString()}`;
+        } else {
+          statusText.textContent = '🔕 Notifications Muted';
+        }
+      } else {
+        statusDiv.classList.remove('muted');
+        statusText.textContent = '🔔 Notifications Active';
+      }
+    }
+
+    async function saveNotificationSettings() {
+      try {
+        const settings = {
+          phone_number: document.getElementById('phoneNumber').value || null,
+          notify_sms: document.getElementById('notifySms').checked,
+          notify_call: document.getElementById('notifyCall').checked,
+          notify_in_app: document.getElementById('notifyInApp').checked
+        };
+
+        const response = await fetch(`${API_URL}/api/users/${currentUser.id}/notifications`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(settings)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save settings');
+        }
+
+        showMessage('Notification settings saved successfully!', 'success');
+        loadSettings();
+      } catch (error) {
+        console.error('Failed to save settings:', error);
+        showMessage('Failed to save notification settings', 'error');
+      }
+    }
+
+    async function saveWorkSchedule() {
+      try {
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        const schedule = {};
+
+        days.forEach(day => {
+          schedule[day] = {
+            start: document.getElementById(`${day}_start`).value,
+            end: document.getElementById(`${day}_end`).value,
+            enabled: document.getElementById(`${day}_enabled`).checked
+          };
+        });
+
+        schedule.lunch_break = {
+          start: document.getElementById('lunch_break_start').value,
+          end: document.getElementById('lunch_break_end').value,
+          enabled: document.getElementById('lunch_break_enabled').checked
+        };
+
+        const response = await fetch(`${API_URL}/api/users/${currentUser.id}/notifications`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ work_schedule: schedule })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save schedule');
+        }
+
+        showMessage('Work schedule saved successfully!', 'success');
+        loadSettings();
+      } catch (error) {
+        console.error('Failed to save schedule:', error);
+        showMessage('Failed to save work schedule', 'error');
+      }
+    }
+
+    async function quickMute(duration) {
+      try {
+        const response = await fetch(`${API_URL}/api/users/${currentUser.id}/mute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ duration })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update mute status');
+        }
+
+        const message = duration === 'lunch' ? 'Muted for 1 hour' :
+                       duration === 'day' ? 'Muted until tomorrow 9am' :
+                       'Notifications resumed';
+        
+        showMessage(message, 'success');
+        loadSettings();
+      } catch (error) {
+        console.error('Failed to update mute status:', error);
+        showMessage('Failed to update mute status', 'error');
+      }
+    }
+
+    function showMessage(text, type) {
+      const messageDiv = document.getElementById('statusMessage');
+      messageDiv.textContent = text;
+      messageDiv.className = `status-message ${type}`;
+      
+      setTimeout(() => {
+        messageDiv.className = 'status-message';
+      }, 5000);
+    }
+
+    async function init() {
+      const authenticated = await checkAuth();
+      if (authenticated) {
+        loadSettings();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
