@@ -1346,6 +1346,10 @@
 
       dashboardWs.onopen = () => {
         console.log('Dashboard WebSocket connected');
+        // Identify as dashboard
+        dashboardWs.send(JSON.stringify({
+          type: 'dashboard_init'
+        }));
       };
 
       dashboardWs.onmessage = (event) => {

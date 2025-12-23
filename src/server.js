@@ -96,6 +96,13 @@ wss.on('connection', (ws, req) => {
     try {
       const message = JSON.parse(data.toString());
       
+      // Handle dashboard identification
+      if (message.type === 'dashboard_init') {
+        isDashboard = true;
+        console.log(`Dashboard explicitly identified: ${connectionId}, total connections: ${connections.size}`);
+        return;
+      }
+      
       // Handle init message to set visitor ID (from chat widget)
       if (message.type === 'init' && message.visitorId) {
         // This is a chat widget connection
@@ -111,12 +118,6 @@ wss.on('connection', (ws, req) => {
           visitorId
         }));
         return;
-      }
-      
-      // If this connection hasn't identified itself and sends a non-init message, it's the dashboard
-      if (!visitorId && !isDashboard && message.type !== 'init') {
-        isDashboard = true;
-        console.log(`Dashboard connection identified: ${connectionId}, total connections: ${connections.size}`);
       }
       
       // If no visitor ID yet and not dashboard, generate one for chat messages
