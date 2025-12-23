@@ -87,6 +87,11 @@
       padding: 1.5rem;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
+    .user-card.inactive {
+      background: #f9fafb;
+      opacity: 0.7;
+      border: 1px dashed #d1d5db;
+    }
     .user-header {
       display: flex;
       justify-content: space-between;
@@ -289,10 +294,10 @@
         }
 
         container.innerHTML = users.map(user => `
-          <div class="user-card">
+          <div class="user-card${!user.is_active ? ' inactive' : ''}">
             <div class="user-header">
               <div class="user-info">
-                <h3>${user.name}</h3>
+                <h3>${user.name} ${!user.is_active ? '<span style="color: #ef4444; font-size: 0.875rem;">(Inactive)</span>' : ''}</h3>
                 <p>${user.email}</p>
               </div>
               <span class="role-badge role-${user.role}">${user.role}</span>
@@ -303,8 +308,12 @@
               ${user.last_seen ? `<div>Last seen: ${new Date(user.last_seen).toLocaleString()}</div>` : ''}
             </div>
             <div class="user-actions">
-              <button class="btn btn-primary" onclick="editUser('${user.id}')">Edit</button>
-              ${currentUser.id !== user.id ? `<button class="btn btn-danger" onclick="deactivateUser('${user.id}', '${user.name}')">Deactivate</button>` : ''}
+              ${user.is_active ? `
+                <button class="btn btn-primary" onclick="editUser('${user.id}')">Edit</button>
+                ${currentUser.id !== user.id ? `<button class="btn btn-danger" onclick="deactivateUser('${user.id}', '${user.name}')">Deactivate</button>` : ''}
+              ` : `
+                <button class="btn btn-primary" onclick="reactivateUser('${user.id}', '${user.name}')">Reactivate</button>
+              `}
             </div>
           </div>
         `).join('');
@@ -421,6 +430,37 @@
       } catch (error) {
         console.error('Failed to deactivate user:', error);
         alert('Failed to deactivate user. Please try again.');
+      }
+    }
+
+    async function reactivateUser(userId, userName) {
+      if (!confirm(`Reactivate ${userName}? They will be able to login again.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/users/${userId}/reactivate`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Reactivate failed:', response.status, errorData);
+          
+          if (response.status === 403) {
+            alert('You do not have permission to reactivate users. Admin access required.');
+          } else {
+            alert(`Failed to reactivate user: ${errorData.error || 'Unknown error'}`);
+          }
+          return;
+        }
+
+        alert(`${userName} has been reactivated successfully.`);
+        loadUsers();
+      } catch (error) {
+        console.error('Failed to reactivate user:', error);
+        alert('Failed to reactivate user. Please try again.');
       }
     }
 

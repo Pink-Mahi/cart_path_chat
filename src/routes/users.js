@@ -8,7 +8,8 @@ import {
   updateUser, 
   updateUserPassword,
   updateUserNotificationSettings,
-  deactivateUser 
+  deactivateUser,
+  reactivateUser
 } from '../db/users.js';
 import { query } from '../db/database.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
@@ -234,6 +235,17 @@ router.delete('/:id', requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Deactivate user error:', error);
     res.status(500).json({ error: 'Failed to deactivate user' });
+  }
+});
+
+// Reactivate user (admin only)
+router.post('/:id/reactivate', requireAdmin, async (req, res) => {
+  try {
+    await reactivateUser(req.params.id);
+    res.json({ message: 'User reactivated successfully' });
+  } catch (error) {
+    console.error('Reactivate user error:', error);
+    res.status(500).json({ error: 'Failed to reactivate user' });
   }
 });
 

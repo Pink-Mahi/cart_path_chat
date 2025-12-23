@@ -158,6 +158,13 @@ export const deactivateUser = async (id) => {
   );
 };
 
+export const reactivateUser = async (id) => {
+  await query(
+    'UPDATE users SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+    [id]
+  );
+};
+
 export const isUserAvailableForNotification = (user) => {
   // Check if manually muted
   if (user.is_muted) {
