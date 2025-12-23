@@ -581,7 +581,7 @@
           
           return `
             <div class="conversation-card" style="position: relative;">
-              <div onclick="openConversation('${conv.id}')" style="cursor: pointer;">
+              <div onclick="openConversation('${conv.id}')" style="cursor: pointer; padding-right: 3rem;">
                 <div class="conversation-header">
                   <div>
                     <div class="visitor-name">${conv.visitor_name || 'Anonymous'}</div>
@@ -617,7 +617,7 @@
 
         container.innerHTML = visits.map(visit => `
           <div class="conversation-card" style="position: relative;">
-            <div onclick="openVisitDetail('${visit.id}')" style="cursor: pointer;">
+            <div onclick="openVisitDetail('${visit.id}')" style="cursor: pointer; padding-right: 3rem;">
               <div class="conversation-header">
                 <div class="visitor-name">${visit.visitor_name}</div>
                 <span class="status-badge status-${visit.status}">${visit.status}</span>
@@ -649,7 +649,7 @@
 
         container.innerHTML = calls.map(call => `
           <div class="conversation-card" style="position: relative;">
-            <div onclick="openCallDetail('${call.id}')" style="cursor: pointer;">
+            <div onclick="openCallDetail('${call.id}')" style="cursor: pointer; padding-right: 3rem;">
               <div class="conversation-header">
                 <div class="visitor-name">${call.visitor_name}</div>
                 <span class="status-badge status-${call.status}">${call.status}</span>
