@@ -671,8 +671,18 @@
     async function loadTeam() {
       try {
         const response = await fetch(`${API_URL}/api/users`, { credentials: 'include' });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch team members');
+        }
+        
         const users = await response.json();
         const container = document.getElementById('teamList');
+        
+        if (!users || users.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 1rem; font-size: 0.875rem;">No team members</div>';
+          return;
+        }
         
         container.innerHTML = users.map(user => {
           const isCurrentUser = currentUser.id === user.id;
@@ -711,6 +721,8 @@
         }).join('');
       } catch (error) {
         console.error('Failed to load team:', error);
+        const container = document.getElementById('teamList');
+        container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 1rem; font-size: 0.875rem;">Failed to load team members</div>';
       }
     }
 
