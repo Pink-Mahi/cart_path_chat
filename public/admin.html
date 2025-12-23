@@ -300,6 +300,29 @@
   <script>
     const API_URL = window.location.origin;
     let currentConversationId = null;
+    let currentUser = null;
+
+    // Check authentication on page load
+    async function checkAuth() {
+      try {
+        const response = await fetch(`${API_URL}/api/auth/status`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+
+        if (!data.authenticated) {
+          window.location.href = '/login.html';
+          return false;
+        }
+
+        currentUser = data.user;
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = '/login.html';
+        return false;
+      }
+    }
 
     async function loadAdminSettings() {
       try {
@@ -483,9 +506,17 @@
       if (e.key === 'Enter') sendReply();
     });
 
-    loadConversations();
-    loadAdminSettings();
-    setInterval(loadConversations, 5000);
+    // Initialize page
+    async function init() {
+      const authenticated = await checkAuth();
+      if (authenticated) {
+        loadConversations();
+        loadAdminSettings();
+        setInterval(loadConversations, 5000);
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>
