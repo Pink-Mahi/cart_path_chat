@@ -524,6 +524,10 @@ app.use('/api/auth', authRoutes);
 // User routes
 app.use('/api/users', userRoutes);
 
+// Team chat routes
+import teamChatRoutes from './routes/teamChat.js';
+app.use('/api/team-chat', teamChatRoutes);
+
 // Conversation assignment endpoints
 app.post('/api/conversations/:id/assign', requireAdminAuth, async (req, res) => {
   try {

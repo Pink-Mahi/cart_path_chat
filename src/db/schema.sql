@@ -101,6 +101,14 @@ CREATE TABLE IF NOT EXISTS admin_presence (
   last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Team chat table for internal communication
+CREATE TABLE IF NOT EXISTS team_chat (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
@@ -116,3 +124,4 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_visits_status ON scheduled_visits(statu
 CREATE INDEX IF NOT EXISTS idx_call_requests_status ON call_requests(status);
 CREATE INDEX IF NOT EXISTS idx_call_requests_created ON call_requests(created_at);
 CREATE INDEX IF NOT EXISTS idx_admin_presence_conversation ON admin_presence(current_conversation_id);
+CREATE INDEX IF NOT EXISTS idx_team_chat_created ON team_chat(created_at);

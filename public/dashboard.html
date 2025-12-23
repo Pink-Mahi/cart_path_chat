@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Cart Path Cleaning</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Main Layout */
+    .dashboard-container {
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      grid-template-rows: 60px 1fr;
+      height: 100vh;
+    }
+
+    /* Header */
+    .dashboard-header {
+      grid-column: 1 / -1;
+      background: #10b981;
+      color: white;
+      padding: 0 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .header-actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+    .header-btn {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: background 0.2s;
+    }
+    .header-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* Left Sidebar - Team */
+    .team-sidebar {
+      background: #1f2937;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .team-header {
+      padding: 1rem;
+      border-bottom: 1px solid #374151;
+      font-weight: 600;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #9ca3af;
+    }
+    .team-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+    }
+    .team-member {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-bottom: 0.25rem;
+    }
+    .team-member:hover {
+      background: #374151;
+    }
+    .presence-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .presence-online { background: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3); }
+    .presence-away { background: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3); }
+    .presence-offline { background: #6b7280; }
+    .team-member-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .team-member-name {
+      font-size: 0.875rem;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .team-member-status {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    /* Main Content Area */
+    .main-content {
+      background: white;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .content-tabs {
+      display: flex;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 1rem;
+      background: #f9fafb;
+    }
+    .tab {
+      padding: 1rem 1.5rem;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #6b7280;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab:hover {
+      color: #111827;
+    }
+    .tab.active {
+      color: #10b981;
+      border-bottom-color: #10b981;
+    }
+    .content-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    /* Conversations List */
+    .conversation-card {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid #e5e7eb;
+    }
+    .conversation-card:hover {
+      background: #f3f4f6;
+      border-color: #10b981;
+    }
+    .conversation-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 0.5rem;
+    }
+    .visitor-name {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .status-unassigned { background: #fee2e2; color: #991b1b; }
+    .status-assigned { background: #dbeafe; color: #1e40af; }
+    .status-resolved { background: #d1fae5; color: #065f46; }
+    .status-needs_human { background: #fef3c7; color: #92400e; }
+    .last-message {
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .conversation-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+    .assigned-to {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+
+    /* Right Sidebar - Team Chat */
+    .team-chat-sidebar {
+      background: white;
+      border-left: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .chat-header {
+      padding: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      font-weight: 600;
+      background: #f9fafb;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .chat-message {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .chat-message-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .chat-sender {
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+    .chat-time {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+    .chat-content {
+      background: #f3f4f6;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+    .chat-input-container {
+      padding: 1rem;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .chat-input {
+      flex: 1;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.875rem;
+    }
+    .send-btn {
+      padding: 0.75rem 1.5rem;
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .send-btn:hover {
+      background: #059669;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+    }
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .message {
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      border-radius: 8px;
+      max-width: 80%;
+    }
+    .message-visitor {
+      background: #f3f4f6;
+      align-self: flex-start;
+    }
+    .message-admin {
+      background: #d1fae5;
+      align-self: flex-end;
+      margin-left: auto;
+    }
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #10b981;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #059669;
+    }
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+  </style>
+</head>
+<body>
+  <!-- Dashboard Header -->
+  <div class="dashboard-container">
+    <div class="dashboard-header">
+      <div class="header-title">💬 Cart Path Cleaning - Admin Dashboard</div>
+      <div class="header-actions">
+        <button class="header-btn" onclick="window.location.href='/my-settings.html'">⚙️ Settings</button>
+        <button class="header-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Left Sidebar - Team -->
+    <div class="team-sidebar">
+      <div class="team-header">👥 Team Members</div>
+      <div class="team-list" id="teamList">
+        <div style="text-align: center; color: #9ca3af; padding: 1rem; font-size: 0.875rem;">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="content-tabs">
+        <button class="tab active" onclick="switchTab('conversations')">💬 Conversations</button>
+        <button class="tab" onclick="switchTab('visits')">📅 Scheduled Visits</button>
+        <button class="tab" onclick="switchTab('calls')">📞 Call Requests</button>
+      </div>
+      <div class="content-body" id="contentBody">
+        <!-- Dynamic content loaded here -->
+      </div>
+    </div>
+
+    <!-- Right Sidebar - Team Chat -->
+    <div class="team-chat-sidebar">
+      <div class="chat-header">💬 Team Chat</div>
+      <div class="chat-messages" id="teamChatMessages">
+        <div style="text-align: center; color: #9ca3af; padding: 2rem; font-size: 0.875rem;">
+          Internal team chat for coordination<br><small>Messages here are private to your team</small>
+        </div>
+      </div>
+      <div class="chat-input-container">
+        <input type="text" id="teamChatInput" class="chat-input" placeholder="Message your team..." />
+        <button class="send-btn" onclick="sendTeamMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conversation Modal -->
+  <div id="conversationModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <div class="visitor-name" id="modalVisitorName"></div>
+          <div style="font-size: 0.875rem; color: #6b7280;" id="modalVisitorEmail"></div>
+          <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;" id="modalAssignedTo"></div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-primary" onclick="assignToMe()" id="assignBtn" style="display: none;">Assign to Me</button>
+          <button class="btn btn-primary" onclick="markResolved()" id="resolveBtn" style="display: none;">Mark Resolved</button>
+          <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+        </div>
+      </div>
+      <div class="modal-body" id="modalMessages" style="display: flex; flex-direction: column;"></div>
+      <div class="modal-footer">
+        <input type="text" id="replyInput" class="chat-input" placeholder="Type your reply..." style="flex: 1;" />
+        <button class="btn btn-primary" onclick="sendReply()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin;
+    let currentUser = null;
+    let currentConversationId = null;
+    let currentTab = 'conversations';
+    let updateInterval = null;
+
+    async function checkAuth() {
+      try {
+        const response = await fetch(`${API_URL}/api/auth/status`, { credentials: 'include' });
+        const data = await response.json();
+        if (!data.authenticated) {
+          window.location.href = '/login.html';
+          return false;
+        }
+        currentUser = data.user;
+        return true;
+      } catch (error) {
+        window.location.href = '/login.html';
+        return false;
+      }
+    }
+
+    async function logout() {
+      await fetch(`${API_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+      window.location.href = '/login.html';
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      loadContent();
+    }
+
+    async function loadContent() {
+      const container = document.getElementById('contentBody');
+      
+      if (currentTab === 'conversations') {
+        await loadConversations();
+      } else if (currentTab === 'visits') {
+        await loadVisits();
+      } else if (currentTab === 'calls') {
+        await loadCalls();
+      }
+    }
+
+    async function loadConversations() {
+      try {
+        const response = await fetch(`${API_URL}/api/conversations`, { credentials: 'include' });
+        const conversations = await response.json();
+        const container = document.getElementById('contentBody');
+        
+        if (conversations.length === 0) {
+          container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #6b7280;">No conversations yet</div>';
+          return;
+        }
+
+        container.innerHTML = conversations.map(conv => {
+          const statusText = conv.status === 'unassigned' ? 'Unassigned' :
+                            conv.status === 'assigned' ? 'In Progress' :
+                            conv.status === 'resolved' ? 'Resolved' :
+                            conv.status === 'needs_human' ? 'Needs Human' : conv.status;
+          
+          const assignedInfo = conv.assigned_to_name ? 
+            `<div class="assigned-to">👤 ${conv.assigned_to_name}</div>` : '';
+          
+          return `
+            <div class="conversation-card" onclick="openConversation('${conv.id}')">
+              <div class="conversation-header">
+                <div>
+                  <div class="visitor-name">${conv.visitor_name || 'Anonymous'}</div>
+                  ${assignedInfo}
+                </div>
+                <span class="status-badge status-${conv.status}">${statusText}</span>
+              </div>
+              <div class="last-message">${conv.last_message || 'No messages yet'}</div>
+              <div class="conversation-meta">
+                <span>${conv.visitor_email || 'No email'}</span>
+                <span>${conv.message_count} messages</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('Failed to load conversations:', error);
+      }
+    }
+
+    async function loadVisits() {
+      try {
+        const response = await fetch(`${API_URL}/api/scheduled-visits`, { credentials: 'include' });
+        const visits = await response.json();
+        const container = document.getElementById('contentBody');
+        
+        if (visits.length === 0) {
+          container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #6b7280;">No scheduled visits</div>';
+          return;
+        }
+
+        container.innerHTML = visits.map(visit => `
+          <div class="conversation-card">
+            <div class="conversation-header">
+              <div class="visitor-name">${visit.visitor_name}</div>
+              <span class="status-badge status-${visit.status}">${visit.status}</span>
+            </div>
+            <div class="last-message">📅 ${new Date(visit.preferred_date).toLocaleDateString()} at ${visit.preferred_time}</div>
+            <div class="conversation-meta">
+              <span>${visit.visitor_email}</span>
+              <span>${visit.visitor_phone || 'No phone'}</span>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load visits:', error);
+      }
+    }
+
+    async function loadCalls() {
+      try {
+        const response = await fetch(`${API_URL}/api/call-requests`, { credentials: 'include' });
+        const calls = await response.json();
+        const container = document.getElementById('contentBody');
+        
+        if (calls.length === 0) {
+          container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #6b7280;">No call requests</div>';
+          return;
+        }
+
+        container.innerHTML = calls.map(call => `
+          <div class="conversation-card">
+            <div class="conversation-header">
+              <div class="visitor-name">${call.visitor_name}</div>
+              <span class="status-badge status-${call.status}">${call.status}</span>
+            </div>
+            <div class="last-message">📞 ${call.visitor_phone}</div>
+            <div class="conversation-meta">
+              <span>${call.visitor_email || 'No email'}</span>
+              <span>${new Date(call.created_at).toLocaleString()}</span>
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load calls:', error);
+      }
+    }
+
+    async function loadTeam() {
+      try {
+        const response = await fetch(`${API_URL}/api/users`, { credentials: 'include' });
+        const users = await response.json();
+        const container = document.getElementById('teamList');
+        
+        container.innerHTML = users.map(user => {
+          const isCurrentUser = currentUser.id === user.id;
+          const lastSeen = user.last_seen ? new Date(user.last_seen) : null;
+          const now = new Date();
+          const minutesAgo = lastSeen ? Math.floor((now - lastSeen) / 1000 / 60) : null;
+          
+          let presenceClass = 'presence-offline';
+          let statusText = 'Offline';
+          
+          if (user.is_muted) {
+            presenceClass = 'presence-away';
+            statusText = 'Muted';
+          } else if (minutesAgo !== null) {
+            if (minutesAgo < 5) {
+              presenceClass = 'presence-online';
+              statusText = 'Active now';
+            } else if (minutesAgo < 30) {
+              presenceClass = 'presence-away';
+              statusText = `${minutesAgo}m ago`;
+            } else {
+              presenceClass = 'presence-offline';
+              statusText = 'Offline';
+            }
+          }
+          
+          return `
+            <div class="team-member">
+              <div class="presence-dot ${presenceClass}"></div>
+              <div class="team-member-info">
+                <div class="team-member-name">${user.name}${isCurrentUser ? ' (You)' : ''}</div>
+                <div class="team-member-status">${statusText}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('Failed to load team:', error);
+      }
+    }
+
+    async function loadTeamChat() {
+      try {
+        const response = await fetch(`${API_URL}/api/team-chat`, { credentials: 'include' });
+        const messages = await response.json();
+        const container = document.getElementById('teamChatMessages');
+        
+        if (messages.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 2rem; font-size: 0.875rem;">No messages yet<br><small>Start chatting with your team!</small></div>';
+          return;
+        }
+
+        container.innerHTML = messages.map(msg => `
+          <div class="chat-message">
+            <div class="chat-message-header">
+              <span class="chat-sender">${msg.sender_name}</span>
+              <span class="chat-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
+            </div>
+            <div class="chat-content">${msg.content}</div>
+          </div>
+        `).join('');
+        
+        container.scrollTop = container.scrollHeight;
+      } catch (error) {
+        console.error('Failed to load team chat:', error);
+      }
+    }
+
+    async function sendTeamMessage() {
+      const input = document.getElementById('teamChatInput');
+      const content = input.value.trim();
+      if (!content) return;
+
+      try {
+        await fetch(`${API_URL}/api/team-chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ content })
+        });
+        input.value = '';
+        loadTeamChat();
+      } catch (error) {
+        console.error('Failed to send message:', error);
+      }
+    }
+
+    async function openConversation(id) {
+      currentConversationId = id;
+      try {
+        const response = await fetch(`${API_URL}/api/conversations/${id}`, { credentials: 'include' });
+        const data = await response.json();
+        
+        document.getElementById('modalVisitorName').textContent = data.conversation.visitor_name || 'Anonymous';
+        document.getElementById('modalVisitorEmail').textContent = data.conversation.visitor_email || 'No email';
+        
+        const assignedToEl = document.getElementById('modalAssignedTo');
+        const assignBtn = document.getElementById('assignBtn');
+        const resolveBtn = document.getElementById('resolveBtn');
+        
+        if (data.conversation.assigned_to) {
+          assignedToEl.textContent = `👤 Assigned to: ${data.conversation.assigned_to_name || 'Unknown'}`;
+          assignBtn.style.display = 'none';
+          resolveBtn.style.display = data.conversation.status !== 'resolved' ? 'inline-block' : 'none';
+        } else {
+          assignedToEl.textContent = '⚠️ Unassigned';
+          assignBtn.style.display = 'inline-block';
+          resolveBtn.style.display = 'none';
+        }
+        
+        const messagesContainer = document.getElementById('modalMessages');
+        messagesContainer.innerHTML = data.messages.map(msg => `
+          <div class="message message-${msg.sender}">${msg.content}</div>
+        `).join('');
+        
+        document.getElementById('conversationModal').classList.add('active');
+      } catch (error) {
+        console.error('Failed to load conversation:', error);
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('conversationModal').classList.remove('active');
+      currentConversationId = null;
+      loadContent();
+    }
+
+    async function assignToMe() {
+      if (!currentConversationId) return;
+      try {
+        await fetch(`${API_URL}/api/conversations/${currentConversationId}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ userId: currentUser.id })
+        });
+        openConversation(currentConversationId);
+      } catch (error) {
+        console.error('Failed to assign:', error);
+      }
+    }
+
+    async function markResolved() {
+      if (!currentConversationId) return;
+      try {
+        await fetch(`${API_URL}/api/conversations/${currentConversationId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ status: 'resolved' })
+        });
+        closeModal();
+      } catch (error) {
+        console.error('Failed to mark resolved:', error);
+      }
+    }
+
+    async function sendReply() {
+      const input = document.getElementById('replyInput');
+      const content = input.value.trim();
+      if (!content || !currentConversationId) return;
+
+      try {
+        await fetch(`${API_URL}/api/conversations/${currentConversationId}/reply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ content })
+        });
+        
+        await fetch(`${API_URL}/api/conversations/${currentConversationId}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ userId: currentUser.id })
+        });
+        
+        input.value = '';
+        openConversation(currentConversationId);
+      } catch (error) {
+        console.error('Failed to send reply:', error);
+      }
+    }
+
+    document.getElementById('teamChatInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendTeamMessage();
+    });
+
+    document.getElementById('replyInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendReply();
+    });
+
+    async function updatePresence() {
+      if (currentUser) {
+        try {
+          await fetch(`${API_URL}/api/users/${currentUser.id}/presence`, {
+            method: 'POST',
+            credentials: 'include'
+          });
+        } catch (error) {
+          // Silent fail
+        }
+      }
+    }
+
+    async function init() {
+      const authenticated = await checkAuth();
+      if (authenticated) {
+        loadContent();
+        loadTeam();
+        loadTeamChat();
+        
+        // Update every 5 seconds
+        updateInterval = setInterval(() => {
+          loadContent();
+          loadTeam();
+          loadTeamChat();
+        }, 5000);
+        
+        // Update presence every minute
+        updatePresence();
+        setInterval(updatePresence, 60000);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

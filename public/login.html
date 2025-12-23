@@ -183,8 +183,8 @@
           throw new Error(data.error || 'Login failed');
         }
 
-        // Redirect to admin panel
-        window.location.href = '/admin.html';
+        // Redirect to unified dashboard
+        window.location.href = '/dashboard.html';
       } catch (error) {
         errorDiv.textContent = error.message;
         errorDiv.style.display = 'block';
@@ -202,7 +202,7 @@
         const data = await response.json();
 
         if (data.authenticated) {
-          window.location.href = '/admin.html';
+          window.location.href = '/dashboard.html';
         }
       } catch (error) {
         console.error('Auth check failed:', error);

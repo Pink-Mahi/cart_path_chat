@@ -80,6 +80,17 @@ async function runMigration() {
       )
     `);
 
+    // Create team_chat table
+    console.log('Creating team_chat table...');
+    await query(`
+      CREATE TABLE IF NOT EXISTS team_chat (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create indexes
     console.log('Creating indexes...');
     await query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
@@ -87,6 +98,7 @@ async function runMigration() {
     await query(`CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_conversations_assigned ON conversations(assigned_to)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_admin_presence_conversation ON admin_presence(current_conversation_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_team_chat_created ON team_chat(created_at)`);
 
     console.log('\n✅ Migration completed successfully!');
     console.log('\nNext steps:');
