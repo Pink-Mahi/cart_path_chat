@@ -200,4 +200,23 @@ router.delete('/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// Update user presence (last_seen)
+router.post('/:id/presence', requireAuth, async (req, res) => {
+  try {
+    if (req.params.id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    await query(
+      'UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = $1',
+      [req.params.id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update presence error:', error);
+    res.status(500).json({ error: 'Failed to update presence' });
+  }
+});
+
 export default router;

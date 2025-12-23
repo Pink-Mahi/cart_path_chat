@@ -19,7 +19,10 @@ export const query = (text, params) => pool.query(text, params);
 
 export const getConversation = async (conversationId) => {
   const result = await query(
-    'SELECT * FROM conversations WHERE id = $1',
+    `SELECT c.*, u.name as assigned_to_name 
+     FROM conversations c 
+     LEFT JOIN users u ON c.assigned_to = u.id 
+     WHERE c.id = $1`,
     [conversationId]
   );
   return result.rows[0];
