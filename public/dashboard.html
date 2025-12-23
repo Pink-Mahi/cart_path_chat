@@ -570,6 +570,7 @@
     let typingTimeouts = new Map(); // Track typing timeouts per conversation
     let typingVisitors = new Set(); // visitor_id values currently typing (for conversation list)
     let typingVisitorTimeouts = new Map(); // visitor_id -> timeout id
+    const TYPING_GRACE_MS = 3000;
 
     async function checkAuth() {
       try {
@@ -604,15 +605,24 @@
           if (currentTab === 'conversations') {
             loadConversations();
           }
-        }, 3000);
+        }, TYPING_GRACE_MS);
 
         typingVisitorTimeouts.set(visitorId, timeout);
       } else {
-        typingVisitors.delete(visitorId);
+        // Grace period after typing stops
         if (typingVisitorTimeouts.has(visitorId)) {
           clearTimeout(typingVisitorTimeouts.get(visitorId));
-          typingVisitorTimeouts.delete(visitorId);
         }
+
+        const timeout = setTimeout(() => {
+          typingVisitors.delete(visitorId);
+          typingVisitorTimeouts.delete(visitorId);
+          if (currentTab === 'conversations') {
+            loadConversations();
+          }
+        }, TYPING_GRACE_MS);
+
+        typingVisitorTimeouts.set(visitorId, timeout);
       }
 
       // If we're currently on conversations, refresh the list so the badge updates
@@ -1483,15 +1493,21 @@
         const timeout = setTimeout(() => {
           typingIndicator.style.visibility = 'hidden';
           typingTimeouts.delete(conversationId);
-        }, 3000);
+        }, TYPING_GRACE_MS);
 
         typingTimeouts.set(conversationId, timeout);
       } else {
-        typingIndicator.style.visibility = 'hidden';
+        // Grace period after typing stops (avoid flicker)
         if (typingTimeouts.has(conversationId)) {
           clearTimeout(typingTimeouts.get(conversationId));
-          typingTimeouts.delete(conversationId);
         }
+
+        const timeout = setTimeout(() => {
+          typingIndicator.style.visibility = 'hidden';
+          typingTimeouts.delete(conversationId);
+        }, TYPING_GRACE_MS);
+
+        typingTimeouts.set(conversationId, timeout);
       }
     }
 
