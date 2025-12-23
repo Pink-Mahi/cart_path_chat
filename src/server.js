@@ -166,10 +166,13 @@ async function handleChatMessage(ws, visitorId, message) {
     
     // Broadcast to all connections
     let broadcastCount = 0;
-    connections.forEach((clientWs) => {
+    console.log(`Total connections in map: ${connections.size}`);
+    connections.forEach((clientWs, connectionKey) => {
+      console.log(`Checking connection ${connectionKey}, readyState: ${clientWs.readyState}, isSender: ${clientWs === ws}`);
       if (clientWs !== ws && clientWs.readyState === 1) { // 1 = OPEN
         clientWs.send(JSON.stringify(typingData));
         broadcastCount++;
+        console.log(`Sent typing indicator to connection ${connectionKey}`);
       }
     });
     
