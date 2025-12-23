@@ -533,6 +533,7 @@
     const API_URL = window.location.origin;
     let currentUser = null;
     let currentConversationId = null;
+    let currentVisitorId = null;
     let currentTab = 'conversations';
     let updateInterval = null;
     let conversationPollInterval = null;
@@ -936,9 +937,7 @@
         const response = await fetch(`${API_URL}/api/conversations/${id}`, { credentials: 'include' });
         const data = await response.json();
         
-        // Store visitor_id for typing indicator matching
-        window.currentVisitorId = data.conversation.visitor_id;
-        console.log('Opened conversation:', id, 'visitor_id:', window.currentVisitorId);
+        currentVisitorId = data.conversation.visitor_id;
         
         document.getElementById('modalVisitorName').textContent = data.conversation.visitor_name || 'Anonymous';
         document.getElementById('modalVisitorEmail').textContent = data.conversation.visitor_email || 'No email';
@@ -992,6 +991,7 @@
       
       document.getElementById('conversationModal').classList.remove('active');
       currentConversationId = null;
+      currentVisitorId = null;
       loadContent();
     }
 
@@ -1356,25 +1356,20 @@
     function connectDashboardWebSocket() {
       // Use the same origin but ensure WebSocket protocol
       const wsUrl = window.location.origin.replace('https://', 'wss://').replace('http://', 'ws://');
-      console.log('Connecting dashboard WebSocket to:', wsUrl);
       dashboardWs = new WebSocket(wsUrl);
 
       dashboardWs.onopen = () => {
-        console.log('Dashboard WebSocket connected successfully');
         // Identify as dashboard
         dashboardWs.send(JSON.stringify({
           type: 'dashboard_init'
         }));
-        console.log('Sent dashboard_init message');
       };
 
       dashboardWs.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('Dashboard received WebSocket message:', data);
           
           if (data.type === 'visitor_typing') {
-            console.log('Handling visitor typing:', data);
             handleVisitorTyping(data.conversationId, data.visitorName, data.isTyping);
           }
         } catch (error) {
@@ -1387,30 +1382,23 @@
       };
 
       dashboardWs.onclose = () => {
-        console.log('Dashboard WebSocket closed, reconnecting...');
         setTimeout(connectDashboardWebSocket, 3000);
       };
     }
 
     function handleVisitorTyping(conversationId, visitorName, isTyping) {
-      console.log(`handleVisitorTyping called: conversationId=${conversationId}, currentConversationId=${currentConversationId}, currentVisitorId=${window.currentVisitorId}, isTyping=${isTyping}`);
-      
       // Only show typing indicator if this conversation is currently open
       // Match against either the database conversation ID or the visitor ID
-      if (currentConversationId !== conversationId && window.currentVisitorId !== conversationId) {
-        console.log('Conversation not currently open, ignoring typing indicator');
+      if (currentConversationId !== conversationId && currentVisitorId !== conversationId) {
         return;
       }
 
       const typingIndicator = document.getElementById('typingIndicator');
       const typingText = document.getElementById('typingText');
-      
-      console.log('Typing indicator element:', typingIndicator);
 
       if (isTyping) {
         typingText.textContent = `💬 ${visitorName} is typing...`;
         typingIndicator.style.visibility = 'visible';
-        console.log('Showing typing indicator');
 
         // Clear existing timeout for this conversation
         if (typingTimeouts.has(conversationId)) {
@@ -1421,13 +1409,11 @@
         const timeout = setTimeout(() => {
           typingIndicator.style.visibility = 'hidden';
           typingTimeouts.delete(conversationId);
-          console.log('Auto-hiding typing indicator after timeout');
         }, 3000);
 
         typingTimeouts.set(conversationId, timeout);
       } else {
         typingIndicator.style.visibility = 'hidden';
-        console.log('Hiding typing indicator');
         if (typingTimeouts.has(conversationId)) {
           clearTimeout(typingTimeouts.get(conversationId));
           typingTimeouts.delete(conversationId);

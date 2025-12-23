@@ -90,7 +90,7 @@ wss.on('connection', (ws, req) => {
   // Generate a connection ID immediately for all connections
   const connectionId = uuidv4();
   connections.set(connectionId, ws);
-  console.log(`New WebSocket connection: ${connectionId}, total connections: ${connections.size}`);
+  console.log(`New WebSocket connection`);
   
   ws.on('message', async (data) => {
     try {
@@ -99,7 +99,6 @@ wss.on('connection', (ws, req) => {
       // Handle dashboard identification
       if (message.type === 'dashboard_init') {
         isDashboard = true;
-        console.log(`Dashboard explicitly identified: ${connectionId}, total connections: ${connections.size}`);
         return;
       }
       
@@ -110,7 +109,6 @@ wss.on('connection', (ws, req) => {
         
         visitorId = message.visitorId;
         connections.set(visitorId, ws);
-        console.log(`Chat widget connected: ${visitorId}, removed temp ID: ${connectionId}, total connections: ${connections.size}`);
         
         ws.send(JSON.stringify({
           type: 'system',
@@ -125,7 +123,6 @@ wss.on('connection', (ws, req) => {
         visitorId = uuidv4();
         connections.delete(connectionId);
         connections.set(visitorId, ws);
-        console.log(`Generated visitor ID: ${visitorId}, removed temp ID: ${connectionId}, total connections: ${connections.size}`);
       }
       
       await handleChatMessage(ws, visitorId || connectionId, message);
@@ -141,10 +138,10 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     if (visitorId) {
       connections.delete(visitorId);
-      console.log(`WebSocket closed: ${visitorId}, total connections: ${connections.size}`);
+      console.log(`WebSocket closed: ${visitorId}`);
     } else {
       connections.delete(connectionId);
-      console.log(`WebSocket closed: ${connectionId}, total connections: ${connections.size}`);
+      console.log(`WebSocket closed: ${connectionId}`);
     }
   });
 });
@@ -161,22 +158,13 @@ async function handleChatMessage(ws, visitorId, message) {
       visitorName: visitorName || 'Visitor',
       isTyping: message.isTyping
     };
-    
-    console.log(`Broadcasting typing indicator: ${visitorName} is ${message.isTyping ? 'typing' : 'stopped typing'} in conversation ${conversationId || visitorId}`);
-    
+
     // Broadcast to all connections
-    let broadcastCount = 0;
-    console.log(`Total connections in map: ${connections.size}`);
-    connections.forEach((clientWs, connectionKey) => {
-      console.log(`Checking connection ${connectionKey}, readyState: ${clientWs.readyState}, isSender: ${clientWs === ws}`);
+    connections.forEach((clientWs) => {
       if (clientWs !== ws && clientWs.readyState === 1) { // 1 = OPEN
         clientWs.send(JSON.stringify(typingData));
-        broadcastCount++;
-        console.log(`Sent typing indicator to connection ${connectionKey}`);
       }
     });
-    
-    console.log(`Typing indicator broadcast to ${broadcastCount} clients`);
     return;
   }
   
