@@ -1293,7 +1293,10 @@
       const authenticated = await checkAuth();
       if (authenticated) {
         loadContent();
-        loadTeam();
+        // Wait a bit for currentUser to be set before loading team
+        setTimeout(() => {
+          loadTeam();
+        }, 100);
         loadTeamChat();
         
         // Update every 5 seconds
