@@ -261,6 +261,29 @@
       <button class="btn btn-primary" onclick="saveNotificationSettings()">Save Notification Settings</button>
     </div>
 
+    <!-- Change Password -->
+    <div class="settings-card">
+      <h2>🔒 Change Password</h2>
+      <p style="color: #6b7280; margin-bottom: 1.5rem;">Update your password for security</p>
+      
+      <div class="form-group">
+        <label for="currentPassword">Current Password *</label>
+        <input type="password" id="currentPassword" placeholder="Enter current password" required>
+      </div>
+
+      <div class="form-group">
+        <label for="newPassword">New Password *</label>
+        <input type="password" id="newPassword" placeholder="Enter new password" required>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirm New Password *</label>
+        <input type="password" id="confirmPassword" placeholder="Confirm new password" required>
+      </div>
+
+      <button class="btn btn-primary" onclick="changePassword()">Change Password</button>
+    </div>
+
     <!-- Work Schedule -->
     <div class="settings-card">
       <h2>📅 Work Schedule</h2>
@@ -460,6 +483,49 @@
       } catch (error) {
         console.error('Failed to save settings:', error);
         showMessage('Failed to save notification settings', 'error');
+      }
+    }
+
+    async function changePassword() {
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        showMessage('Please fill in all password fields', 'error');
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        showMessage('New passwords do not match', 'error');
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        showMessage('New password must be at least 6 characters', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/users/change-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ currentPassword, newPassword })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to change password');
+        }
+
+        showMessage('Password changed successfully!', 'success');
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+      } catch (error) {
+        console.error('Failed to change password:', error);
+        showMessage(error.message || 'Failed to change password', 'error');
       }
     }
 

@@ -100,7 +100,42 @@ router.patch('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Update password (self only)
+// Change password with current password verification
+router.post('/change-password', requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    // Verify current password
+    const bcrypt = await import('bcrypt');
+    const user = await getUserById(req.session.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Update to new password
+    await updateUserPassword(req.session.userId, newPassword);
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// Update password (self only) - admin can reset without current password
 router.patch('/:id/password', requireAuth, async (req, res) => {
   try {
     const { password } = req.body;
