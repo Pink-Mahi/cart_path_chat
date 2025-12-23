@@ -1,4 +1,5 @@
 import express from 'express';
+import session from 'express-session';
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import cors from 'cors';
@@ -12,7 +13,8 @@ import {
   getMessages,
   getAllConversations,
   updateConversationStatus,
-  getConversation
+  getConversation,
+  assignConversation
 } from './db/database.js';
 import { getChatResponse, shouldEscalateToHuman } from './ai/openai.js';
 import { sendHumanNeededNotification } from './utils/email.js';
@@ -28,6 +30,11 @@ import { getAdminSettings, updateAdminSettings } from './db/adminSettings.js';
 import { createCallRequest, getCallRequests, getCallRequest, updateCallRequestStatus } from './db/callRequests.js';
 import { createCannedResponse, getCannedResponses, getCannedResponse, updateCannedResponse, deleteCannedResponse } from './db/cannedResponses.js';
 import { isBusinessHours, getAfterHoursMessage } from './utils/businessHours.js';
+import { getActiveAdmins, isUserAvailableForNotification } from './db/users.js';
+import { notifyAdminsNewChat, notifyAdminsNeedsHuman, notifyAdminsScheduledVisit, notifyAdminsCallRequest } from './utils/notifications.js';
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
+import { attachUser } from './middleware/auth.js';
 
 dotenv.config();
 
@@ -75,6 +82,20 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'cart-path-chat-secret-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+  }
+}));
+
+app.use(attachUser);
 
 // Store active WebSocket connections
 const connections = new Map();
@@ -147,31 +168,7 @@ async function handleChatMessage(ws, visitorId, message) {
 
     if (isFirstVisitorMessage) {
       await sendWhatsAppNotification(conversation, content, 'new_chat');
-
-      const settings = await getAdminSettings();
-      const to = settings.on_duty_phone || DEFAULT_ON_DUTY_PHONE;
-      if (to) {
-        const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/admin.html` : null;
-        const smsBody = link
-          ? `Cart Path Cleaning: New visitor message. Check admin panel: ${link}`
-          : `Cart Path Cleaning: New visitor message. Check admin panel.`;
-
-        if (settings.notify_sms_new_chat) {
-          try {
-            await sendTwilioSms(to, smsBody);
-          } catch (err) {
-            console.error('Twilio SMS new_chat failed:', err);
-          }
-        }
-
-        if (settings.notify_call_new_chat) {
-          try {
-            await makeTwilioCall(to, 'New sales lead from website chat. Please check the admin panel.');
-          } catch (err) {
-            console.error('Twilio call new_chat failed:', err);
-          }
-        }
-      }
+      await notifyAdminsNewChat(conversation.id, ADMIN_PANEL_URL);
     }
     
     // Get conversation history
@@ -183,32 +180,7 @@ async function handleChatMessage(ws, visitorId, message) {
     if (needsEscalation) {
       await sendHumanNeededNotification(conversation, content);
       await sendWhatsAppNotification(conversation, content, 'human_needed');
-
-      const settings = await getAdminSettings();
-      const to = settings.on_duty_phone || DEFAULT_ON_DUTY_PHONE;
-      if (to) {
-        const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/admin.html` : null;
-        const smsBody = link
-          ? `Cart Path Cleaning: Human response needed. Check admin panel: ${link}`
-          : `Cart Path Cleaning: Human response needed. Check admin panel.`;
-
-        if (settings.notify_sms_needs_human) {
-          try {
-            await sendTwilioSms(to, smsBody);
-          } catch (err) {
-            console.error('Twilio SMS needs_human failed:', err);
-          }
-        }
-
-        if (settings.notify_call_needs_human) {
-          try {
-            await makeTwilioCall(to, 'Cart Path Cleaning: Human response needed. Check the admin panel.');
-          } catch (err) {
-            console.error('Twilio call needs_human failed:', err);
-          }
-        }
-      }
-
+      await notifyAdminsNeedsHuman(conversation.id, ADMIN_PANEL_URL);
       await updateConversationStatus(conversation.id, 'needs_human');
       
       const whatsappLink = getBusinessWhatsAppLink();
@@ -288,22 +260,7 @@ async function handleChatMessage(ws, visitorId, message) {
 
       const scheduleMessage = `📅 Visit scheduled for ${content.preferredDate} at ${content.preferredTime}\n${content.propertyAddress}`;
       await sendWhatsAppNotification(conversation, scheduleMessage, 'scheduling');
-
-      // Send SMS notification for scheduled visit
-      const settings = await getAdminSettings();
-      const to = settings.on_duty_phone || DEFAULT_ON_DUTY_PHONE;
-      if (to) {
-        const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/scheduled-visits.html` : null;
-        const smsBody = link
-          ? `Cart Path Cleaning: Visit scheduled for ${content.preferredDate} at ${content.propertyAddress}. ${link}`
-          : `Cart Path Cleaning: Visit scheduled for ${content.preferredDate} at ${content.propertyAddress}.`;
-        
-        try {
-          await sendTwilioSms(to, smsBody);
-        } catch (err) {
-          console.error('Twilio SMS scheduled visit failed:', err);
-        }
-      }
+      await notifyAdminsScheduledVisit(content.preferredDate, content.propertyAddress, ADMIN_PANEL_URL);
       
       ws.send(JSON.stringify({
         type: 'system',
@@ -330,29 +287,7 @@ async function handleChatMessage(ws, visitorId, message) {
       });
 
       console.log('Call request created:', callRequest.id);
-
-      const settings = await getAdminSettings();
-      const to = settings.on_duty_phone || DEFAULT_ON_DUTY_PHONE;
-      console.log('Sending SMS to:', to);
-      console.log('Admin settings:', settings);
-      
-      if (to) {
-        const link = ADMIN_PANEL_URL ? `${ADMIN_PANEL_URL}/admin.html` : null;
-        const smsBody = link
-          ? `Cart Path Cleaning: Call back request from ${content.visitorName} at ${content.visitorPhone}. ${link}`
-          : `Cart Path Cleaning: Call back request from ${content.visitorName} at ${content.visitorPhone}.`;
-        
-        console.log('SMS body:', smsBody);
-        
-        try {
-          await sendTwilioSms(to, smsBody);
-          console.log('SMS sent successfully');
-        } catch (err) {
-          console.error('Twilio SMS callback failed:', err);
-        }
-      } else {
-        console.error('No on-duty phone configured for SMS');
-      }
+      await notifyAdminsCallRequest(content.visitorName, content.visitorPhone, ADMIN_PANEL_URL);
 
       // Add a message to the conversation so it's not anonymous
       await addMessage(conversation.id, 'visitor', `Requested call back at ${content.visitorPhone}`);
@@ -579,6 +514,26 @@ app.delete('/api/canned-responses/:id', requireAdminAuth, async (req, res) => {
   } catch (error) {
     console.error('Error deleting canned response:', error);
     res.status(500).json({ error: 'Failed to delete canned response' });
+  }
+});
+
+// Auth routes
+app.use('/api/auth', authRoutes);
+
+// User routes
+app.use('/api/users', userRoutes);
+
+// Conversation assignment endpoints
+app.post('/api/conversations/:id/assign', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+    
+    const conversation = await assignConversation(id, userId);
+    res.json(conversation);
+  } catch (error) {
+    console.error('Error assigning conversation:', error);
+    res.status(500).json({ error: 'Failed to assign conversation' });
   }
 });
 
