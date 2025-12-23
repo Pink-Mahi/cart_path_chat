@@ -688,6 +688,12 @@
           return;
         }
         
+        // Ensure currentUser is available before mapping
+        if (!currentUser) {
+          console.warn('currentUser not yet loaded, skipping team render');
+          return;
+        }
+        
         container.innerHTML = users.map(user => {
           const isCurrentUser = currentUser.id === user.id;
           const lastSeen = user.last_seen ? new Date(user.last_seen) : null;
