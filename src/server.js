@@ -326,6 +326,84 @@ async function handleChatMessage(ws, visitorId, message) {
 
 // REST API endpoints
 
+app.post('/api/public/scheduled-visits', async (req, res) => {
+  try {
+    const {
+      visitorName,
+      visitorEmail,
+      visitorPhone,
+      propertyAddress,
+      propertyType,
+      preferredDate,
+      preferredTime,
+      notes
+    } = req.body || {};
+
+    if (!visitorName || !visitorEmail || !visitorPhone || !propertyAddress || !preferredDate) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const visitorId = uuidv4();
+    const conversation = await getOrCreateConversation(visitorId, visitorName, visitorEmail);
+
+    const visit = await createScheduledVisit({
+      conversationId: conversation.id,
+      visitorName,
+      visitorEmail,
+      visitorPhone,
+      propertyAddress,
+      propertyType,
+      preferredDate,
+      preferredTime,
+      notes
+    });
+
+    await addMessage(
+      conversation.id,
+      'visitor',
+      `Scheduled on-site visit for ${preferredDate}${preferredTime ? ` at ${preferredTime}` : ''}. ${propertyAddress}`
+    );
+
+    const scheduleMessage = `📅 Visit scheduled for ${preferredDate} at ${preferredTime}\n${propertyAddress}`;
+    await sendWhatsAppNotification(conversation, scheduleMessage, 'scheduling');
+    await notifyAdminsScheduledVisit(preferredDate, propertyAddress, ADMIN_PANEL_URL);
+
+    res.json({ success: true, visitId: visit.id, conversationId: conversation.id });
+  } catch (error) {
+    console.error('Public scheduling error:', error);
+    res.status(500).json({ error: 'Failed to create scheduled visit' });
+  }
+});
+
+app.post('/api/public/call-requests', async (req, res) => {
+  try {
+    const { visitorName, visitorEmail, visitorPhone, bestTime, notes } = req.body || {};
+
+    if (!visitorName || !visitorEmail || !visitorPhone) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const visitorId = uuidv4();
+    const conversation = await getOrCreateConversation(visitorId, visitorName, visitorEmail);
+
+    const callRequest = await createCallRequest({
+      conversationId: conversation.id,
+      visitorName,
+      visitorPhone,
+      bestTime,
+      notes
+    });
+
+    await notifyAdminsCallRequest(visitorName, visitorPhone, ADMIN_PANEL_URL);
+    await addMessage(conversation.id, 'visitor', `Requested call back at ${visitorPhone}`);
+
+    res.json({ success: true, callRequestId: callRequest.id, conversationId: conversation.id });
+  } catch (error) {
+    console.error('Public call request error:', error);
+    res.status(500).json({ error: 'Failed to create call request' });
+  }
+});
+
 // Admin settings endpoints (protected)
 app.get('/api/admin-settings', requireAdmin, async (req, res) => {
   try {
