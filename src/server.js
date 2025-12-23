@@ -35,7 +35,7 @@ import { getActiveAdmins, isUserAvailableForNotification } from './db/users.js';
 import { notifyAdminsNewChat, notifyAdminsNeedsHuman, notifyAdminsScheduledVisit, notifyAdminsCallRequest } from './utils/notifications.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
-import { attachUser } from './middleware/auth.js';
+import { attachUser, requireAuth, requireAdmin } from './middleware/auth.js';
 
 dotenv.config();
 
@@ -54,28 +54,8 @@ const ADMIN_PANEL_URL =
   (process.env.COOLIFY_FQDN ? `https://${process.env.COOLIFY_FQDN}` : null);
 const DEFAULT_ON_DUTY_PHONE = process.env.DEFAULT_ON_DUTY_PHONE;
 
-function requireAdminAuth(req, res, next) {
-  if (!ADMIN_PANEL_USER || !ADMIN_PANEL_PASS) {
-    return next();
-  }
-
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Basic ')) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Cart Path Chat Admin"');
-    return res.status(401).send('Authentication required');
-  }
-
-  const base64Credentials = authHeader.slice('Basic '.length).trim();
-  const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
-  const [username, password] = credentials.split(':');
-
-  if (username !== ADMIN_PANEL_USER || password !== ADMIN_PANEL_PASS) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Cart Path Chat Admin"');
-    return res.status(401).send('Invalid credentials');
-  }
-
-  return next();
-}
+// Old HTTP Basic Auth function - replaced with session-based auth
+// Kept for reference but no longer used
 
 // Middleware
 app.use(cors({
@@ -313,7 +293,7 @@ async function handleChatMessage(ws, visitorId, message) {
 // REST API endpoints
 
 // Admin settings endpoints (protected)
-app.get('/api/admin-settings', requireAdminAuth, async (req, res) => {
+app.get('/api/admin-settings', requireAdmin, async (req, res) => {
   try {
     const settings = await getAdminSettings();
     res.json(settings);
@@ -323,7 +303,7 @@ app.get('/api/admin-settings', requireAdminAuth, async (req, res) => {
   }
 });
 
-app.patch('/api/admin-settings', requireAdminAuth, async (req, res) => {
+app.patch('/api/admin-settings', requireAdmin, async (req, res) => {
   try {
     const updated = await updateAdminSettings(req.body || {});
     res.json(updated);
@@ -334,7 +314,7 @@ app.patch('/api/admin-settings', requireAdminAuth, async (req, res) => {
 });
 
 // Get all conversations (for admin panel)
-app.get('/api/conversations', requireAdminAuth, async (req, res) => {
+app.get('/api/conversations', requireAuth, async (req, res) => {
   try {
     const conversations = await getAllConversations();
     res.json(conversations);
@@ -345,7 +325,7 @@ app.get('/api/conversations', requireAdminAuth, async (req, res) => {
 });
 
 // Get specific conversation with messages
-app.get('/api/conversations/:id', requireAdminAuth, async (req, res) => {
+app.get('/api/conversations/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const conversation = await getConversation(id);
@@ -366,7 +346,7 @@ app.get('/api/conversations/:id', requireAdminAuth, async (req, res) => {
 });
 
 // Send admin reply
-app.post('/api/conversations/:id/reply', requireAdminAuth, async (req, res) => {
+app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
@@ -398,7 +378,7 @@ app.post('/api/conversations/:id/reply', requireAdminAuth, async (req, res) => {
 });
 
 // Update conversation status
-app.patch('/api/conversations/:id/status', requireAdminAuth, async (req, res) => {
+app.patch('/api/conversations/:id/status', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -412,7 +392,7 @@ app.patch('/api/conversations/:id/status', requireAdminAuth, async (req, res) =>
 });
 
 // Delete conversation
-app.delete('/api/conversations/:id', requireAdminAuth, async (req, res) => {
+app.delete('/api/conversations/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -437,7 +417,7 @@ app.delete('/api/conversations/:id', requireAdminAuth, async (req, res) => {
 });
 
 // Scheduling endpoints
-app.get('/api/scheduled-visits', requireAdminAuth, async (req, res) => {
+app.get('/api/scheduled-visits', requireAuth, async (req, res) => {
   try {
     const visits = await getScheduledVisits();
     res.json(visits);
@@ -447,7 +427,7 @@ app.get('/api/scheduled-visits', requireAdminAuth, async (req, res) => {
   }
 });
 
-app.get('/api/scheduled-visits/:id', requireAdminAuth, async (req, res) => {
+app.get('/api/scheduled-visits/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const visit = await getScheduledVisit(id);
@@ -463,7 +443,7 @@ app.get('/api/scheduled-visits/:id', requireAdminAuth, async (req, res) => {
   }
 });
 
-app.patch('/api/scheduled-visits/:id/status', requireAdminAuth, async (req, res) => {
+app.patch('/api/scheduled-visits/:id/status', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -477,7 +457,7 @@ app.patch('/api/scheduled-visits/:id/status', requireAdminAuth, async (req, res)
 });
 
 // Delete scheduled visit
-app.delete('/api/scheduled-visits/:id', requireAdminAuth, async (req, res) => {
+app.delete('/api/scheduled-visits/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM scheduled_visits WHERE id = $1', [id]);
@@ -489,7 +469,7 @@ app.delete('/api/scheduled-visits/:id', requireAdminAuth, async (req, res) => {
 });
 
 // Call requests endpoints
-app.get('/api/call-requests', requireAdminAuth, async (req, res) => {
+app.get('/api/call-requests', requireAuth, async (req, res) => {
   try {
     const requests = await getCallRequests();
     res.json(requests);
@@ -499,7 +479,7 @@ app.get('/api/call-requests', requireAdminAuth, async (req, res) => {
   }
 });
 
-app.get('/api/call-requests/:id', requireAdminAuth, async (req, res) => {
+app.get('/api/call-requests/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const request = await getCallRequest(id);
@@ -513,7 +493,7 @@ app.get('/api/call-requests/:id', requireAdminAuth, async (req, res) => {
   }
 });
 
-app.patch('/api/call-requests/:id/status', requireAdminAuth, async (req, res) => {
+app.patch('/api/call-requests/:id/status', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -526,7 +506,7 @@ app.patch('/api/call-requests/:id/status', requireAdminAuth, async (req, res) =>
 });
 
 // Delete call request
-app.delete('/api/call-requests/:id', requireAdminAuth, async (req, res) => {
+app.delete('/api/call-requests/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM call_requests WHERE id = $1', [id]);
@@ -538,7 +518,7 @@ app.delete('/api/call-requests/:id', requireAdminAuth, async (req, res) => {
 });
 
 // Canned responses endpoints
-app.get('/api/canned-responses', requireAdminAuth, async (req, res) => {
+app.get('/api/canned-responses', requireAuth, async (req, res) => {
   try {
     const responses = await getCannedResponses();
     res.json(responses);
@@ -548,7 +528,7 @@ app.get('/api/canned-responses', requireAdminAuth, async (req, res) => {
   }
 });
 
-app.post('/api/canned-responses', requireAdminAuth, async (req, res) => {
+app.post('/api/canned-responses', requireAdmin, async (req, res) => {
   try {
     const { shortcut, message } = req.body;
     const response = await createCannedResponse(shortcut, message);
@@ -559,7 +539,7 @@ app.post('/api/canned-responses', requireAdminAuth, async (req, res) => {
   }
 });
 
-app.patch('/api/canned-responses/:id', requireAdminAuth, async (req, res) => {
+app.patch('/api/canned-responses/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { shortcut, message } = req.body;
@@ -571,7 +551,7 @@ app.patch('/api/canned-responses/:id', requireAdminAuth, async (req, res) => {
   }
 });
 
-app.delete('/api/canned-responses/:id', requireAdminAuth, async (req, res) => {
+app.delete('/api/canned-responses/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await deleteCannedResponse(id);
@@ -593,7 +573,7 @@ import teamChatRoutes from './routes/teamChat.js';
 app.use('/api/team-chat', teamChatRoutes);
 
 // Conversation assignment endpoints
-app.post('/api/conversations/:id/assign', requireAdminAuth, async (req, res) => {
+app.post('/api/conversations/:id/assign', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { userId } = req.body;
@@ -628,11 +608,11 @@ app.get('/health', (req, res) => {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.get('/admin.html', requireAdminAuth, (req, res) => {
+app.get('/admin.html', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, '../public/admin.html'));
 });
 
-app.get('/scheduled-visits.html', requireAdminAuth, (req, res) => {
+app.get('/scheduled-visits.html', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, '../public/scheduled-visits.html'));
 });
 
