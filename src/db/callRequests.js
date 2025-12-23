@@ -12,7 +12,11 @@ export async function createCallRequest(data) {
 
 export async function getCallRequests(limit = 100) {
   const result = await query(
-    `SELECT * FROM call_requests ORDER BY created_at DESC LIMIT $1`,
+    `SELECT cr.*, c.visitor_email 
+     FROM call_requests cr
+     LEFT JOIN conversations c ON cr.conversation_id = c.id
+     ORDER BY cr.created_at DESC 
+     LIMIT $1`,
     [limit]
   );
   return result.rows;
