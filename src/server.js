@@ -328,6 +328,8 @@ async function handleChatMessage(ws, visitorId, message) {
 
 app.post('/api/public/scheduled-visits', async (req, res) => {
   try {
+    console.log('📅 Public scheduled visit request received:', req.body);
+    
     const {
       visitorName,
       visitorEmail,
@@ -340,12 +342,16 @@ app.post('/api/public/scheduled-visits', async (req, res) => {
     } = req.body || {};
 
     if (!visitorName || !visitorEmail || !visitorPhone || !propertyAddress || !preferredDate) {
+      console.log('❌ Missing required fields');
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const visitorId = uuidv4();
+    console.log('Creating conversation for visitor:', visitorId);
     const conversation = await getOrCreateConversation(visitorId, visitorName, visitorEmail);
+    console.log('✅ Conversation created:', conversation.id);
 
+    console.log('Creating scheduled visit record...');
     const visit = await createScheduledVisit({
       conversationId: conversation.id,
       visitorName,
@@ -357,6 +363,7 @@ app.post('/api/public/scheduled-visits', async (req, res) => {
       preferredTime,
       notes
     });
+    console.log('✅ Scheduled visit created:', visit.id);
 
     await addMessage(
       conversation.id,
@@ -368,24 +375,31 @@ app.post('/api/public/scheduled-visits', async (req, res) => {
     await sendWhatsAppNotification(conversation, scheduleMessage, 'scheduling');
     await notifyAdminsScheduledVisit(preferredDate, propertyAddress, ADMIN_PANEL_URL);
 
+    console.log('✅ Public scheduled visit complete - visitId:', visit.id, 'conversationId:', conversation.id);
     res.json({ success: true, visitId: visit.id, conversationId: conversation.id });
   } catch (error) {
-    console.error('Public scheduling error:', error);
+    console.error('❌ Public scheduling error:', error);
     res.status(500).json({ error: 'Failed to create scheduled visit' });
   }
 });
 
 app.post('/api/public/call-requests', async (req, res) => {
   try {
+    console.log('📞 Public call request received:', req.body);
+    
     const { visitorName, visitorEmail, visitorPhone, bestTime, notes } = req.body || {};
 
     if (!visitorName || !visitorEmail || !visitorPhone) {
+      console.log('❌ Missing required fields');
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const visitorId = uuidv4();
+    console.log('Creating conversation for visitor:', visitorId);
     const conversation = await getOrCreateConversation(visitorId, visitorName, visitorEmail);
+    console.log('✅ Conversation created:', conversation.id);
 
+    console.log('Creating call request record...');
     const callRequest = await createCallRequest({
       conversationId: conversation.id,
       visitorName,
@@ -393,13 +407,15 @@ app.post('/api/public/call-requests', async (req, res) => {
       bestTime,
       notes
     });
+    console.log('✅ Call request created:', callRequest.id);
 
     await notifyAdminsCallRequest(visitorName, visitorPhone, ADMIN_PANEL_URL);
     await addMessage(conversation.id, 'visitor', `Requested call back at ${visitorPhone}`);
 
+    console.log('✅ Public call request complete - callRequestId:', callRequest.id, 'conversationId:', conversation.id);
     res.json({ success: true, callRequestId: callRequest.id, conversationId: conversation.id });
   } catch (error) {
-    console.error('Public call request error:', error);
+    console.error('❌ Public call request error:', error);
     res.status(500).json({ error: 'Failed to create call request' });
   }
 });
