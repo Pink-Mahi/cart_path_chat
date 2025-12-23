@@ -106,7 +106,8 @@ CREATE TABLE IF NOT EXISTS team_chat (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP
 );
 
 -- Create indexes

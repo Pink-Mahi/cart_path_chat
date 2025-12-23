@@ -87,9 +87,22 @@ async function runMigration() {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         content TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP
       )
     `);
+    
+    // Add updated_at column if table already exists
+    const checkUpdatedAt = await query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name='team_chat' AND column_name='updated_at'
+    `);
+    
+    if (checkUpdatedAt.rows.length === 0) {
+      await query(`ALTER TABLE team_chat ADD COLUMN updated_at TIMESTAMP`);
+      console.log('  - Added updated_at column to team_chat');
+    }
 
     // Create indexes
     console.log('Creating indexes...');

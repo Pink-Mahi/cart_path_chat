@@ -637,15 +637,33 @@
           return;
         }
 
-        container.innerHTML = messages.map(msg => `
-          <div class="chat-message">
-            <div class="chat-message-header">
-              <span class="chat-sender">${msg.sender_name}</span>
-              <span class="chat-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
+        container.innerHTML = messages.map(msg => {
+          const isOwnMessage = currentUser && msg.sender_id === currentUser.id;
+          const editedLabel = msg.updated_at ? ' <small style="color: #9ca3af;">(edited)</small>' : '';
+          
+          return `
+            <div class="chat-message" id="msg-${msg.id}">
+              <div class="chat-message-header">
+                <span class="chat-sender">${msg.sender_name}${editedLabel}</span>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <span class="chat-time">${new Date(msg.created_at).toLocaleTimeString()}</span>
+                  ${isOwnMessage ? `
+                    <button onclick="editTeamMessage('${msg.id}', '${msg.content.replace(/'/g, "\\'")}', event)" style="background: none; border: none; cursor: pointer; color: #6b7280; padding: 0.25rem; font-size: 0.75rem;" title="Edit">✏️</button>
+                    <button onclick="deleteTeamMessage('${msg.id}', event)" style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 0.25rem; font-size: 0.75rem;" title="Delete">🗑️</button>
+                  ` : ''}
+                </div>
+              </div>
+              <div class="chat-content" id="content-${msg.id}">${msg.content}</div>
+              <div id="edit-${msg.id}" style="display: none; margin-top: 0.5rem;">
+                <input type="text" id="input-${msg.id}" value="${msg.content.replace(/"/g, '&quot;')}" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                  <button onclick="saveTeamMessageEdit('${msg.id}')" style="padding: 0.25rem 0.75rem; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Save</button>
+                  <button onclick="cancelTeamMessageEdit('${msg.id}')" style="padding: 0.25rem 0.75rem; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Cancel</button>
+                </div>
+              </div>
             </div>
-            <div class="chat-content">${msg.content}</div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
         
         container.scrollTop = container.scrollHeight;
       } catch (error) {
@@ -674,11 +692,78 @@
         }
         
         input.value = '';
-        // Small delay to ensure message is saved
         setTimeout(() => loadTeamChat(), 100);
       } catch (error) {
         console.error('Failed to send message:', error);
         alert('Failed to send message. Please try again.');
+      }
+    }
+
+    function editTeamMessage(id, content, event) {
+      event.stopPropagation();
+      document.getElementById(`content-${id}`).style.display = 'none';
+      document.getElementById(`edit-${id}`).style.display = 'block';
+      document.getElementById(`input-${id}`).focus();
+    }
+
+    function cancelTeamMessageEdit(id) {
+      document.getElementById(`content-${id}`).style.display = 'block';
+      document.getElementById(`edit-${id}`).style.display = 'none';
+    }
+
+    async function saveTeamMessageEdit(id) {
+      const input = document.getElementById(`input-${id}`);
+      const content = input.value.trim();
+      
+      if (!content) {
+        alert('Message cannot be empty');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/team-chat/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ content })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          alert('Failed to edit message: ' + (error.error || 'Unknown error'));
+          return;
+        }
+        
+        loadTeamChat();
+      } catch (error) {
+        console.error('Failed to edit message:', error);
+        alert('Failed to edit message. Please try again.');
+      }
+    }
+
+    async function deleteTeamMessage(id, event) {
+      event.stopPropagation();
+      
+      if (!confirm('Are you sure you want to delete this message?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/team-chat/${id}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          alert('Failed to delete message: ' + (error.error || 'Unknown error'));
+          return;
+        }
+        
+        loadTeamChat();
+      } catch (error) {
+        console.error('Failed to delete message:', error);
+        alert('Failed to delete message. Please try again.');
       }
     }
 
