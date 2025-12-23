@@ -370,6 +370,7 @@
     <div class="dashboard-header">
       <div class="header-title">💬 Cart Path Cleaning - Admin Dashboard</div>
       <div class="header-actions">
+        <button class="header-btn" onclick="window.location.href='/canned-responses.html'">💬 Quick Replies</button>
         <button class="header-btn" onclick="window.location.href='/my-settings.html'">⚙️ Settings</button>
         <button class="header-btn" onclick="logout()">Logout</button>
       </div>
@@ -427,6 +428,9 @@
       </div>
       <div class="modal-body" id="modalMessages" style="display: flex; flex-direction: column;"></div>
       <div class="modal-footer">
+        <select id="quickReplySelect" onchange="insertQuickReply()" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; margin-right: 0.5rem;">
+          <option value="">💬 Quick Replies</option>
+        </select>
         <input type="text" id="replyInput" class="chat-input" placeholder="Type your reply..." style="flex: 1;" />
         <button class="btn btn-primary" onclick="sendReply()">Send</button>
       </div>
@@ -872,6 +876,9 @@
           <div class="message message-${msg.sender}">${msg.content}</div>
         `).join('');
         
+        // Load quick replies
+        loadQuickReplies();
+        
         document.getElementById('conversationModal').classList.add('active');
       } catch (error) {
         console.error('Failed to load conversation:', error);
@@ -1020,6 +1027,36 @@
         closeModal();
       } catch (error) {
         console.error('Failed to mark resolved:', error);
+      }
+    }
+
+    async function loadQuickReplies() {
+      try {
+        const response = await fetch(`${API_URL}/api/canned-responses`, { credentials: 'include' });
+        const replies = await response.json();
+        
+        const select = document.getElementById('quickReplySelect');
+        select.innerHTML = '<option value="">💬 Quick Replies</option>';
+        
+        replies.forEach(reply => {
+          const option = document.createElement('option');
+          option.value = reply.content;
+          option.textContent = reply.title;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Failed to load quick replies:', error);
+      }
+    }
+
+    function insertQuickReply() {
+      const select = document.getElementById('quickReplySelect');
+      const input = document.getElementById('replyInput');
+      
+      if (select.value) {
+        input.value = select.value;
+        input.focus();
+        select.value = '';
       }
     }
 
