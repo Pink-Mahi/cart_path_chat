@@ -492,7 +492,7 @@
         font-size: 0.75rem;
       }
       
-      .header-btn span {
+      .btn-text {
         display: none;
       }
       
@@ -581,14 +581,14 @@
     <div class="dashboard-header">
       <div style="display: flex; align-items: center; gap: 0.75rem;">
         <button class="mobile-menu-btn" onclick="toggleTeamSidebar()">👥</button>
-        <div class="header-title">💬 Admin Dashboard</div>
+        <div class="header-title">💬 Cart Path Cleaning - Admin Dashboard</div>
       </div>
       <div class="header-actions">
         <button class="mobile-menu-btn" onclick="toggleChatSidebar()">💬</button>
         <button class="header-btn" onclick="window.location.href='/knowledge-base.html'" id="knowledgeBaseBtn" style="display: none;">🤖 AI Knowledge</button>
-        <button class="header-btn" onclick="window.location.href='/canned-responses.html'">💬</button>
-        <button class="header-btn" onclick="window.location.href='/my-settings.html'">⚙️</button>
-        <button class="header-btn" onclick="logout()">🚪</button>
+        <button class="header-btn" onclick="window.location.href='/canned-responses.html'">💬 <span class="btn-text">Quick Replies</span></button>
+        <button class="header-btn" onclick="window.location.href='/my-settings.html'">⚙️ <span class="btn-text">Settings</span></button>
+        <button class="header-btn" onclick="logout()"><span class="btn-text">Logout</span></button>
       </div>
     </div>
     
