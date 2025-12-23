@@ -192,6 +192,19 @@
     .status-assigned { background: #dbeafe; color: #1e40af; }
     .status-resolved { background: #d1fae5; color: #065f46; }
     .status-needs_human { background: #fef3c7; color: #92400e; }
+    .typing-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #fef3c7;
+      color: #92400e;
+      margin-left: 0.5rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
     .last-message {
       color: #6b7280;
       font-size: 0.875rem;
@@ -539,6 +552,8 @@
     let conversationPollInterval = null;
     let dashboardWs = null;
     let typingTimeouts = new Map(); // Track typing timeouts per conversation
+    let typingVisitors = new Set(); // visitor_id values currently typing (for conversation list)
+    let typingVisitorTimeouts = new Map(); // visitor_id -> timeout id
 
     async function checkAuth() {
       try {
@@ -553,6 +568,40 @@
       } catch (error) {
         window.location.href = '/login.html';
         return false;
+      }
+    }
+
+    function updateConversationListTyping(visitorId, isTyping) {
+      if (!visitorId) return;
+
+      if (isTyping) {
+        typingVisitors.add(visitorId);
+
+        if (typingVisitorTimeouts.has(visitorId)) {
+          clearTimeout(typingVisitorTimeouts.get(visitorId));
+        }
+
+        const timeout = setTimeout(() => {
+          typingVisitors.delete(visitorId);
+          typingVisitorTimeouts.delete(visitorId);
+          // Re-render list if we're currently on conversations
+          if (currentTab === 'conversations') {
+            loadConversations();
+          }
+        }, 3000);
+
+        typingVisitorTimeouts.set(visitorId, timeout);
+      } else {
+        typingVisitors.delete(visitorId);
+        if (typingVisitorTimeouts.has(visitorId)) {
+          clearTimeout(typingVisitorTimeouts.get(visitorId));
+          typingVisitorTimeouts.delete(visitorId);
+        }
+      }
+
+      // If we're currently on conversations, refresh the list so the badge updates
+      if (currentTab === 'conversations') {
+        loadConversations();
       }
     }
 
@@ -599,16 +648,22 @@
           
           const assignedInfo = conv.assigned_to_name ? 
             `<div class="assigned-to">👤 ${conv.assigned_to_name}</div>` : '';
+
+          const isTyping = conv.visitor_id && typingVisitors.has(conv.visitor_id);
+          const typingBadge = isTyping ? `<span class="typing-badge">Typing...</span>` : '';
           
           return `
-            <div class="conversation-card" style="position: relative;">
+            <div class="conversation-card" style="position: relative;" data-conversation-id="${conv.id}" data-visitor-id="${conv.visitor_id || ''}">
               <div onclick="openConversation('${conv.id}')" style="cursor: pointer; padding-right: 3rem;">
                 <div class="conversation-header">
                   <div>
                     <div class="visitor-name">${conv.visitor_name || 'Anonymous'}</div>
                     ${assignedInfo}
                   </div>
-                  <span class="status-badge status-${conv.status}">${statusText}</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    ${typingBadge}
+                    <span class="status-badge status-${conv.status}">${statusText}</span>
+                  </div>
                 </div>
                 <div class="last-message">${conv.last_message || 'No messages yet'}</div>
                 <div class="conversation-meta">
@@ -1387,14 +1442,17 @@
     }
 
     function handleVisitorTyping(conversationId, visitorName, isTyping) {
-      // Only show typing indicator if this conversation is currently open
+      // Update conversation list typing badge (uses visitor_id)
+      updateConversationListTyping(conversationId, isTyping);
+
+      const typingIndicator = document.getElementById('typingIndicator');
+      const typingText = document.getElementById('typingText');
+
+      // Only show modal typing indicator if this conversation is currently open
       // Match against either the database conversation ID or the visitor ID
       if (currentConversationId !== conversationId && currentVisitorId !== conversationId) {
         return;
       }
-
-      const typingIndicator = document.getElementById('typingIndicator');
-      const typingText = document.getElementById('typingText');
 
       if (isTyping) {
         typingText.textContent = `💬 ${visitorName} is typing...`;
