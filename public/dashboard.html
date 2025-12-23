@@ -549,6 +549,10 @@
             <strong>⏰ Requested:</strong>
             <div id="callModalTime" style="color: #6b7280; margin-top: 0.25rem;"></div>
           </div>
+          <div style="display: none;">
+            <strong>📝 Notes:</strong>
+            <div id="callModalNotes" style="color: #6b7280; margin-top: 0.25rem;"></div>
+          </div>
           <div>
             <strong>Status:</strong>
             <span id="callModalStatus" class="status-badge"></span>
@@ -1084,10 +1088,16 @@
       try {
         const response = await fetch(`${API_URL}/api/scheduled-visits/${id}`, { credentials: 'include' });
         const visit = await response.json();
+        console.log('Scheduled visit data:', visit);
         
-        document.getElementById('visitModalName').textContent = visit.visitor_name;
-        document.getElementById('visitModalEmail').textContent = visit.visitor_email;
-        document.getElementById('visitModalDateTime').textContent = `${new Date(visit.preferred_date).toLocaleDateString()} at ${visit.preferred_time}`;
+        document.getElementById('visitModalName').textContent = visit.visitor_name || 'Unknown';
+        document.getElementById('visitModalEmail').textContent = visit.visitor_email || 'No email provided';
+        
+        // Format date and time
+        const dateStr = visit.preferred_date ? new Date(visit.preferred_date).toLocaleDateString() : 'No date';
+        const timeStr = visit.preferred_time || 'No time specified';
+        document.getElementById('visitModalDateTime').textContent = `${dateStr} at ${timeStr}`;
+        
         document.getElementById('visitModalPhone').textContent = visit.visitor_phone || 'No phone provided';
         document.getElementById('visitModalAddress').textContent = visit.property_address || 'No address provided';
         document.getElementById('visitModalPropertyType').textContent = visit.property_type || 'Not specified';
@@ -1139,11 +1149,26 @@
       try {
         const response = await fetch(`${API_URL}/api/call-requests/${id}`, { credentials: 'include' });
         const call = await response.json();
+        console.log('Call request data:', call);
         
-        document.getElementById('callModalName').textContent = call.visitor_name;
+        document.getElementById('callModalName').textContent = call.visitor_name || 'Unknown';
         document.getElementById('callModalEmail').textContent = call.visitor_email || 'No email provided';
-        document.getElementById('callModalPhone').textContent = call.visitor_phone;
-        document.getElementById('callModalTime').textContent = new Date(call.created_at).toLocaleString();
+        document.getElementById('callModalPhone').textContent = call.visitor_phone || 'No phone provided';
+        
+        // Show best_time if available, otherwise show created_at
+        const timeText = call.best_time 
+          ? `Best time: ${call.best_time}` 
+          : `Requested: ${new Date(call.created_at).toLocaleString()}`;
+        document.getElementById('callModalTime').textContent = timeText;
+        
+        // Show notes if available
+        if (call.notes) {
+          const notesDiv = document.getElementById('callModalNotes');
+          if (notesDiv) {
+            notesDiv.textContent = call.notes;
+            notesDiv.parentElement.style.display = 'block';
+          }
+        }
         
         const statusBadge = document.getElementById('callModalStatus');
         statusBadge.textContent = call.status;
