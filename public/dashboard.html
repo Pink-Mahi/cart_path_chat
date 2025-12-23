@@ -433,6 +433,78 @@
     </div>
   </div>
 
+  <!-- Visit Detail Modal -->
+  <div id="visitModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <div class="visitor-name" id="visitModalName"></div>
+          <div style="font-size: 0.875rem; color: #6b7280;" id="visitModalEmail"></div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-primary" onclick="confirmVisit()" id="visitConfirmBtn">✓ Confirm Visit</button>
+          <button class="btn btn-secondary" onclick="closeVisitModal()">Close</button>
+        </div>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <div style="display: grid; gap: 1rem;">
+          <div>
+            <strong>📅 Date & Time:</strong>
+            <div id="visitModalDateTime" style="color: #6b7280; margin-top: 0.25rem;"></div>
+          </div>
+          <div>
+            <strong>📞 Phone:</strong>
+            <div id="visitModalPhone" style="color: #6b7280; margin-top: 0.25rem;"></div>
+          </div>
+          <div>
+            <strong>📍 Address:</strong>
+            <div id="visitModalAddress" style="color: #6b7280; margin-top: 0.25rem;"></div>
+          </div>
+          <div>
+            <strong>📝 Additional Details:</strong>
+            <div id="visitModalDetails" style="color: #6b7280; margin-top: 0.25rem;"></div>
+          </div>
+          <div>
+            <strong>Status:</strong>
+            <span id="visitModalStatus" class="status-badge"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Call Request Detail Modal -->
+  <div id="callModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <div class="visitor-name" id="callModalName"></div>
+          <div style="font-size: 0.875rem; color: #6b7280;" id="callModalEmail"></div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-primary" onclick="markCallComplete()" id="callCompleteBtn">✓ Mark Complete</button>
+          <button class="btn btn-secondary" onclick="closeCallModal()">Close</button>
+        </div>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <div style="display: grid; gap: 1rem;">
+          <div>
+            <strong>📞 Phone Number:</strong>
+            <div id="callModalPhone" style="color: #6b7280; margin-top: 0.25rem; font-size: 1.25rem;"></div>
+          </div>
+          <div>
+            <strong>⏰ Requested:</strong>
+            <div id="callModalTime" style="color: #6b7280; margin-top: 0.25rem;"></div>
+          </div>
+          <div>
+            <strong>Status:</strong>
+            <span id="callModalStatus" class="status-badge"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     const API_URL = window.location.origin;
     let currentUser = null;
@@ -810,6 +882,115 @@
       document.getElementById('conversationModal').classList.remove('active');
       currentConversationId = null;
       loadContent();
+    }
+
+    let currentVisitId = null;
+    let currentCallId = null;
+
+    async function openVisitDetail(id) {
+      currentVisitId = id;
+      try {
+        const response = await fetch(`${API_URL}/api/scheduled-visits/${id}`, { credentials: 'include' });
+        const visit = await response.json();
+        
+        document.getElementById('visitModalName').textContent = visit.visitor_name;
+        document.getElementById('visitModalEmail').textContent = visit.visitor_email;
+        document.getElementById('visitModalDateTime').textContent = `${new Date(visit.preferred_date).toLocaleDateString()} at ${visit.preferred_time}`;
+        document.getElementById('visitModalPhone').textContent = visit.visitor_phone || 'No phone provided';
+        document.getElementById('visitModalAddress').textContent = visit.additional_details || 'No additional details';
+        document.getElementById('visitModalDetails').textContent = visit.additional_details || 'No additional details';
+        
+        const statusBadge = document.getElementById('visitModalStatus');
+        statusBadge.textContent = visit.status;
+        statusBadge.className = `status-badge status-${visit.status}`;
+        
+        const confirmBtn = document.getElementById('visitConfirmBtn');
+        confirmBtn.style.display = visit.status === 'pending' ? 'inline-block' : 'none';
+        
+        document.getElementById('visitModal').classList.add('active');
+      } catch (error) {
+        console.error('Failed to load visit:', error);
+        alert('Failed to load visit details');
+      }
+    }
+
+    function closeVisitModal() {
+      document.getElementById('visitModal').classList.remove('active');
+      currentVisitId = null;
+    }
+
+    async function confirmVisit() {
+      if (!currentVisitId) return;
+      try {
+        const response = await fetch(`${API_URL}/api/scheduled-visits/${currentVisitId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ status: 'confirmed' })
+        });
+        
+        if (response.ok) {
+          closeVisitModal();
+          loadContent();
+        } else {
+          alert('Failed to confirm visit');
+        }
+      } catch (error) {
+        console.error('Failed to confirm visit:', error);
+        alert('Failed to confirm visit');
+      }
+    }
+
+    async function openCallDetail(id) {
+      currentCallId = id;
+      try {
+        const response = await fetch(`${API_URL}/api/call-requests/${id}`, { credentials: 'include' });
+        const call = await response.json();
+        
+        document.getElementById('callModalName').textContent = call.visitor_name;
+        document.getElementById('callModalEmail').textContent = call.visitor_email || 'No email provided';
+        document.getElementById('callModalPhone').textContent = call.visitor_phone;
+        document.getElementById('callModalTime').textContent = new Date(call.created_at).toLocaleString();
+        
+        const statusBadge = document.getElementById('callModalStatus');
+        statusBadge.textContent = call.status;
+        statusBadge.className = `status-badge status-${call.status}`;
+        
+        const completeBtn = document.getElementById('callCompleteBtn');
+        completeBtn.style.display = call.status === 'pending' ? 'inline-block' : 'none';
+        
+        document.getElementById('callModal').classList.add('active');
+      } catch (error) {
+        console.error('Failed to load call request:', error);
+        alert('Failed to load call request details');
+      }
+    }
+
+    function closeCallModal() {
+      document.getElementById('callModal').classList.remove('active');
+      currentCallId = null;
+    }
+
+    async function markCallComplete() {
+      if (!currentCallId) return;
+      try {
+        const response = await fetch(`${API_URL}/api/call-requests/${currentCallId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ status: 'completed' })
+        });
+        
+        if (response.ok) {
+          closeCallModal();
+          loadContent();
+        } else {
+          alert('Failed to mark call as complete');
+        }
+      } catch (error) {
+        console.error('Failed to mark call complete:', error);
+        alert('Failed to mark call as complete');
+      }
     }
 
     async function assignToMe() {

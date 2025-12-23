@@ -461,6 +461,20 @@ app.get('/api/call-requests', requireAdminAuth, async (req, res) => {
   }
 });
 
+app.get('/api/call-requests/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const request = await getCallRequest(id);
+    if (!request) {
+      return res.status(404).json({ error: 'Call request not found' });
+    }
+    res.json(request);
+  } catch (error) {
+    console.error('Error fetching call request:', error);
+    res.status(500).json({ error: 'Failed to fetch call request' });
+  }
+});
+
 app.patch('/api/call-requests/:id/status', requireAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
