@@ -12,8 +12,8 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Get all users (admin only)
-router.get('/', requireAdmin, async (req, res) => {
+// Get all users (all authenticated users can see team members)
+router.get('/', requireAuth, async (req, res) => {
   try {
     const users = await getAllUsers();
     res.json(users);
