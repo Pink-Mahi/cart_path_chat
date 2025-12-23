@@ -29,6 +29,7 @@ import {
 } from './db/scheduling.js';
 import { getAdminSettings, updateAdminSettings } from './db/adminSettings.js';
 import { createCallRequest, getCallRequests, getCallRequest, updateCallRequestStatus } from './db/callRequests.js';
+import { createContactSubmission, getContactSubmissions, getContactSubmission, updateContactSubmissionStatus, assignContactSubmission } from './db/contactSubmissions.js';
 import { createCannedResponse, getCannedResponses, getCannedResponse, updateCannedResponse, deleteCannedResponse } from './db/cannedResponses.js';
 import { isBusinessHours, getAfterHoursMessage } from './utils/businessHours.js';
 import { getActiveAdmins, isUserAvailableForNotification } from './db/users.js';
@@ -642,6 +643,98 @@ app.delete('/api/call-requests/:id', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error deleting call request:', error);
     res.status(500).json({ error: 'Failed to delete call request' });
+  }
+});
+
+// Contact submissions endpoints
+app.post('/api/public/contact-submissions', async (req, res) => {
+  try {
+    console.log('📧 Public contact submission received:', req.body);
+    
+    const { visitorName, visitorEmail, visitorPhone, organizationType, message } = req.body || {};
+
+    if (!visitorName || !visitorEmail || !visitorPhone || !message) {
+      console.log('❌ Missing required fields');
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    console.log('Creating contact submission record...');
+    const submission = await createContactSubmission({
+      visitorName,
+      visitorEmail,
+      visitorPhone,
+      organizationType,
+      message
+    });
+    console.log('✅ Contact submission created:', submission.id);
+
+    // Notify admins about new contact submission
+    await notifyAdminsNewChat(visitorName, ADMIN_PANEL_URL);
+
+    console.log('✅ Public contact submission complete - submissionId:', submission.id);
+    res.json({ success: true, submissionId: submission.id });
+  } catch (error) {
+    console.error('❌ Public contact submission error:', error);
+    res.status(500).json({ error: 'Failed to create contact submission' });
+  }
+});
+
+app.get('/api/contact-submissions', requireAuth, async (req, res) => {
+  try {
+    const submissions = await getContactSubmissions();
+    res.json(submissions);
+  } catch (error) {
+    console.error('Error fetching contact submissions:', error);
+    res.status(500).json({ error: 'Failed to fetch contact submissions' });
+  }
+});
+
+app.get('/api/contact-submissions/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const submission = await getContactSubmission(id);
+    if (!submission) {
+      return res.status(404).json({ error: 'Contact submission not found' });
+    }
+    res.json(submission);
+  } catch (error) {
+    console.error('Error fetching contact submission:', error);
+    res.status(500).json({ error: 'Failed to fetch contact submission' });
+  }
+});
+
+app.patch('/api/contact-submissions/:id/status', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const submission = await updateContactSubmissionStatus(id, status);
+    res.json(submission);
+  } catch (error) {
+    console.error('Error updating contact submission status:', error);
+    res.status(500).json({ error: 'Failed to update contact submission status' });
+  }
+});
+
+app.patch('/api/contact-submissions/:id/assign', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+    const submission = await assignContactSubmission(id, userId);
+    res.json(submission);
+  } catch (error) {
+    console.error('Error assigning contact submission:', error);
+    res.status(500).json({ error: 'Failed to assign contact submission' });
+  }
+});
+
+app.delete('/api/contact-submissions/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await query('DELETE FROM contact_submissions WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting contact submission:', error);
+    res.status(500).json({ error: 'Failed to delete contact submission' });
   }
 });
 

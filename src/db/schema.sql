@@ -83,6 +83,20 @@ CREATE TABLE IF NOT EXISTS call_requests (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Contact form submissions table
+CREATE TABLE IF NOT EXISTS contact_submissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  visitor_name VARCHAR(255) NOT NULL,
+  visitor_email VARCHAR(255) NOT NULL,
+  visitor_phone VARCHAR(50) NOT NULL,
+  organization_type VARCHAR(100),
+  message TEXT NOT NULL,
+  status VARCHAR(50) DEFAULT 'pending',
+  assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Canned responses table
 CREATE TABLE IF NOT EXISTS canned_responses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -124,5 +138,7 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_visits_date ON scheduled_visits(preferr
 CREATE INDEX IF NOT EXISTS idx_scheduled_visits_status ON scheduled_visits(status);
 CREATE INDEX IF NOT EXISTS idx_call_requests_status ON call_requests(status);
 CREATE INDEX IF NOT EXISTS idx_call_requests_created ON call_requests(created_at);
+CREATE INDEX IF NOT EXISTS idx_contact_submissions_status ON contact_submissions(status);
+CREATE INDEX IF NOT EXISTS idx_contact_submissions_created ON contact_submissions(created_at);
 CREATE INDEX IF NOT EXISTS idx_admin_presence_conversation ON admin_presence(current_conversation_id);
 CREATE INDEX IF NOT EXISTS idx_team_chat_created ON team_chat(created_at);
