@@ -936,6 +936,10 @@
         const response = await fetch(`${API_URL}/api/conversations/${id}`, { credentials: 'include' });
         const data = await response.json();
         
+        // Store visitor_id for typing indicator matching
+        window.currentVisitorId = data.conversation.visitor_id;
+        console.log('Opened conversation:', id, 'visitor_id:', window.currentVisitorId);
+        
         document.getElementById('modalVisitorName').textContent = data.conversation.visitor_name || 'Anonymous';
         document.getElementById('modalVisitorEmail').textContent = data.conversation.visitor_email || 'No email';
         
@@ -1389,10 +1393,11 @@
     }
 
     function handleVisitorTyping(conversationId, visitorName, isTyping) {
-      console.log(`handleVisitorTyping called: conversationId=${conversationId}, currentConversationId=${currentConversationId}, isTyping=${isTyping}`);
+      console.log(`handleVisitorTyping called: conversationId=${conversationId}, currentConversationId=${currentConversationId}, currentVisitorId=${window.currentVisitorId}, isTyping=${isTyping}`);
       
       // Only show typing indicator if this conversation is currently open
-      if (currentConversationId !== conversationId) {
+      // Match against either the database conversation ID or the visitor ID
+      if (currentConversationId !== conversationId && window.currentVisitorId !== conversationId) {
         console.log('Conversation not currently open, ignoring typing indicator');
         return;
       }
