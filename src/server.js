@@ -86,7 +86,10 @@ const connections = new Map();
 wss.on('connection', (ws, req) => {
   let visitorId = null;
   
-  console.log(`New WebSocket connection`);
+  // Generate a connection ID immediately for dashboard connections
+  const connectionId = uuidv4();
+  connections.set(connectionId, ws);
+  console.log(`New WebSocket connection: ${connectionId}`);
   
   ws.on('message', async (data) => {
     try {
@@ -94,9 +97,12 @@ wss.on('connection', (ws, req) => {
       
       // Handle init message to set visitor ID
       if (message.type === 'init' && message.visitorId) {
+        // Remove the temporary connection ID
+        connections.delete(connectionId);
+        
         visitorId = message.visitorId;
         connections.set(visitorId, ws);
-        console.log(`Visitor ID set: ${visitorId}`);
+        console.log(`Visitor ID set: ${visitorId}, removed temp ID: ${connectionId}`);
         
         ws.send(JSON.stringify({
           type: 'system',
@@ -106,14 +112,15 @@ wss.on('connection', (ws, req) => {
         return;
       }
       
-      // If no visitor ID yet, generate one
-      if (!visitorId) {
+      // If no visitor ID yet, generate one (but keep connection in map)
+      if (!visitorId && message.type !== 'typing') {
         visitorId = uuidv4();
+        connections.delete(connectionId);
         connections.set(visitorId, ws);
-        console.log(`Generated visitor ID: ${visitorId}`);
+        console.log(`Generated visitor ID: ${visitorId}, removed temp ID: ${connectionId}`);
       }
       
-      await handleChatMessage(ws, visitorId, message);
+      await handleChatMessage(ws, visitorId || connectionId, message);
     } catch (error) {
       console.error('WebSocket message error:', error);
       ws.send(JSON.stringify({
@@ -127,6 +134,9 @@ wss.on('connection', (ws, req) => {
     if (visitorId) {
       connections.delete(visitorId);
       console.log(`WebSocket closed: ${visitorId}`);
+    } else {
+      connections.delete(connectionId);
+      console.log(`WebSocket closed: ${connectionId}`);
     }
   });
 });
