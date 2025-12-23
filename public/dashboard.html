@@ -1350,15 +1350,18 @@
     }
 
     function connectDashboardWebSocket() {
-      const wsUrl = API_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+      // Use the same origin but ensure WebSocket protocol
+      const wsUrl = window.location.origin.replace('https://', 'wss://').replace('http://', 'ws://');
+      console.log('Connecting dashboard WebSocket to:', wsUrl);
       dashboardWs = new WebSocket(wsUrl);
 
       dashboardWs.onopen = () => {
-        console.log('Dashboard WebSocket connected');
+        console.log('Dashboard WebSocket connected successfully');
         // Identify as dashboard
         dashboardWs.send(JSON.stringify({
           type: 'dashboard_init'
         }));
+        console.log('Sent dashboard_init message');
       };
 
       dashboardWs.onmessage = (event) => {
