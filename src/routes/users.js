@@ -10,6 +10,7 @@ import {
   updateUserNotificationSettings,
   deactivateUser 
 } from '../db/users.js';
+import { query } from '../db/database.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
