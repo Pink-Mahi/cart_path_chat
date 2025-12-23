@@ -405,13 +405,22 @@
         });
 
         if (!response.ok) {
-          throw new Error('Failed to deactivate user');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Deactivate failed:', response.status, errorData);
+          
+          if (response.status === 403) {
+            alert('You do not have permission to deactivate users. Admin access required.');
+          } else {
+            alert(`Failed to deactivate user: ${errorData.error || 'Unknown error'}`);
+          }
+          return;
         }
 
+        alert(`${userName} has been deactivated successfully.`);
         loadUsers();
       } catch (error) {
         console.error('Failed to deactivate user:', error);
-        alert('Failed to deactivate user');
+        alert('Failed to deactivate user. Please try again.');
       }
     }
 
