@@ -1,13 +1,13 @@
 import { getActiveAdmins, isUserAvailableForNotification } from '../db/users.js';
 import { sendTwilioSms, makeTwilioCall } from './twilio.js';
 
-export async function notifyAdmins(message, type = 'new_chat', ignoreSchedule = false) {
+export async function notifyAdmins(message, type = 'new_chat') {
   try {
     const admins = await getActiveAdmins();
     
     for (const admin of admins) {
-      // Check if admin should receive notification (skip schedule check if ignoreSchedule is true)
-      if (!ignoreSchedule && !isUserAvailableForNotification(admin)) {
+      // Check if admin should receive notification
+      if (!isUserAvailableForNotification(admin)) {
         console.log(`Skipping notification for ${admin.name} - not available`);
         continue;
       }
@@ -43,8 +43,7 @@ export async function notifyAdminsNewChat(conversationId, adminPanelUrl) {
     ? `Cart Path Cleaning: New visitor message. Check dashboard: ${link}`
     : `Cart Path Cleaning: New visitor message. Check dashboard.`;
   
-  // Always send new chat notifications regardless of work schedule
-  await notifyAdmins(message, 'new_chat', true);
+  await notifyAdmins(message, 'new_chat');
 }
 
 export async function notifyAdminsNeedsHuman(conversationId, adminPanelUrl) {
