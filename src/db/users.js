@@ -168,9 +168,19 @@ export const isUserAvailableForNotification = (user) => {
 
   // Check work schedule
   if (user.work_schedule) {
+    // Use America/New_York timezone for work schedule checks
+    const timezone = user.work_schedule.timezone || 'America/New_York';
     const now = new Date();
-    const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    // Get current time in the user's timezone
+    const options = { timeZone: timezone, weekday: 'long', hour: '2-digit', minute: '2-digit', hour12: false };
+    const formatter = new Intl.DateTimeFormat('en-US', options);
+    const parts = formatter.formatToParts(now);
+    
+    const dayOfWeek = parts.find(p => p.type === 'weekday').value.toLowerCase();
+    const hour = parts.find(p => p.type === 'hour').value;
+    const minute = parts.find(p => p.type === 'minute').value;
+    const currentTime = `${hour}:${minute}`;
 
     const daySchedule = user.work_schedule[dayOfWeek];
     if (!daySchedule || !daySchedule.enabled) {
