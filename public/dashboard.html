@@ -897,8 +897,8 @@
         document.getElementById('visitModalEmail').textContent = visit.visitor_email;
         document.getElementById('visitModalDateTime').textContent = `${new Date(visit.preferred_date).toLocaleDateString()} at ${visit.preferred_time}`;
         document.getElementById('visitModalPhone').textContent = visit.visitor_phone || 'No phone provided';
-        document.getElementById('visitModalAddress').textContent = visit.additional_details || 'No additional details';
-        document.getElementById('visitModalDetails').textContent = visit.additional_details || 'No additional details';
+        document.getElementById('visitModalAddress').textContent = visit.property_address || 'No address provided';
+        document.getElementById('visitModalDetails').textContent = visit.notes || 'No additional details';
         
         const statusBadge = document.getElementById('visitModalStatus');
         statusBadge.textContent = visit.status;
