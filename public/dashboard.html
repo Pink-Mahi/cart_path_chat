@@ -523,6 +523,7 @@
     let currentConversationId = null;
     let currentTab = 'conversations';
     let updateInterval = null;
+    let conversationPollInterval = null;
 
     async function checkAuth() {
       try {
@@ -883,8 +884,40 @@
       }
     }
 
+    async function refreshConversationMessages() {
+      if (!currentConversationId) return;
+      
+      try {
+        const response = await fetch(`${API_URL}/api/conversations/${currentConversationId}`, { credentials: 'include' });
+        const data = await response.json();
+        
+        const messagesContainer = document.getElementById('modalMessages');
+        const currentScroll = messagesContainer.scrollTop;
+        const isScrolledToBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 50;
+        
+        messagesContainer.innerHTML = data.messages.map(msg => `
+          <div class="message message-${msg.sender}">${msg.content}</div>
+        `).join('');
+        
+        // Auto-scroll to bottom if user was already at bottom
+        if (isScrolledToBottom) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        } else {
+          messagesContainer.scrollTop = currentScroll;
+        }
+      } catch (error) {
+        console.error('Failed to refresh messages:', error);
+      }
+    }
+
     async function openConversation(id) {
       currentConversationId = id;
+      
+      // Clear any existing poll interval
+      if (conversationPollInterval) {
+        clearInterval(conversationPollInterval);
+      }
+      
       try {
         const response = await fetch(`${API_URL}/api/conversations/${id}`, { credentials: 'include' });
         const data = await response.json();
@@ -916,17 +949,29 @@
           <div class="message message-${msg.sender}">${msg.content}</div>
         `).join('');
         
+        // Scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
         // Load quick replies and team members for reassignment
         loadQuickReplies();
         loadTeamMembersForReassign();
         
         document.getElementById('conversationModal').classList.add('active');
+        
+        // Start polling for new messages every 3 seconds
+        conversationPollInterval = setInterval(refreshConversationMessages, 3000);
       } catch (error) {
         console.error('Failed to load conversation:', error);
       }
     }
 
     function closeModal() {
+      // Stop polling when modal closes
+      if (conversationPollInterval) {
+        clearInterval(conversationPollInterval);
+        conversationPollInterval = null;
+      }
+      
       document.getElementById('conversationModal').classList.remove('active');
       currentConversationId = null;
       loadContent();
