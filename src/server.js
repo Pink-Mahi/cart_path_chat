@@ -144,12 +144,18 @@ async function handleChatMessage(ws, visitorId, message) {
       isTyping: message.isTyping
     };
     
+    console.log(`Broadcasting typing indicator: ${visitorName} is ${message.isTyping ? 'typing' : 'stopped typing'} in conversation ${conversationId || visitorId}`);
+    
     // Broadcast to all connections
+    let broadcastCount = 0;
     connections.forEach((clientWs) => {
       if (clientWs !== ws && clientWs.readyState === 1) { // 1 = OPEN
         clientWs.send(JSON.stringify(typingData));
+        broadcastCount++;
       }
     });
+    
+    console.log(`Typing indicator broadcast to ${broadcastCount} clients`);
     return;
   }
   

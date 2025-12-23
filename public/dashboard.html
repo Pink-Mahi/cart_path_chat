@@ -1351,8 +1351,10 @@
       dashboardWs.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log('Dashboard received WebSocket message:', data);
           
           if (data.type === 'visitor_typing') {
+            console.log('Handling visitor typing:', data);
             handleVisitorTyping(data.conversationId, data.visitorName, data.isTyping);
           }
         } catch (error) {
@@ -1371,17 +1373,23 @@
     }
 
     function handleVisitorTyping(conversationId, visitorName, isTyping) {
+      console.log(`handleVisitorTyping called: conversationId=${conversationId}, currentConversationId=${currentConversationId}, isTyping=${isTyping}`);
+      
       // Only show typing indicator if this conversation is currently open
       if (currentConversationId !== conversationId) {
+        console.log('Conversation not currently open, ignoring typing indicator');
         return;
       }
 
       const typingIndicator = document.getElementById('typingIndicator');
       const typingText = document.getElementById('typingText');
+      
+      console.log('Typing indicator element:', typingIndicator);
 
       if (isTyping) {
         typingText.textContent = `${visitorName} is typing...`;
         typingIndicator.style.display = 'block';
+        console.log('Showing typing indicator');
 
         // Clear existing timeout for this conversation
         if (typingTimeouts.has(conversationId)) {
@@ -1392,11 +1400,13 @@
         const timeout = setTimeout(() => {
           typingIndicator.style.display = 'none';
           typingTimeouts.delete(conversationId);
+          console.log('Auto-hiding typing indicator after timeout');
         }, 3000);
 
         typingTimeouts.set(conversationId, timeout);
       } else {
         typingIndicator.style.display = 'none';
+        console.log('Hiding typing indicator');
         if (typingTimeouts.has(conversationId)) {
           clearTimeout(typingTimeouts.get(conversationId));
           typingTimeouts.delete(conversationId);
