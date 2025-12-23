@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcrypt';
 import { 
   createUser, 
   getAllUsers, 
@@ -114,7 +115,6 @@ router.post('/change-password', requireAuth, async (req, res) => {
     }
 
     // Verify current password
-    const bcrypt = await import('bcrypt');
     const user = await getUserById(req.session.userId);
     
     if (!user) {
