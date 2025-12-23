@@ -29,6 +29,14 @@ export const getUserById = async (id) => {
   return result.rows[0];
 };
 
+export const getUserWithPassword = async (id) => {
+  const result = await query(
+    'SELECT id, name, email, password_hash FROM users WHERE id = $1',
+    [id]
+  );
+  return result.rows[0];
+};
+
 export const getAllUsers = async () => {
   const result = await query(
     'SELECT id, name, email, role, phone_number, is_active, last_seen, created_at FROM users ORDER BY created_at DESC'

@@ -3,7 +3,8 @@ import bcrypt from 'bcrypt';
 import { 
   createUser, 
   getAllUsers, 
-  getUserById, 
+  getUserById,
+  getUserWithPassword,
   updateUser, 
   updateUserPassword,
   updateUserNotificationSettings,
@@ -115,7 +116,7 @@ router.post('/change-password', requireAuth, async (req, res) => {
     }
 
     // Verify current password
-    const user = await getUserById(req.session.userId);
+    const user = await getUserWithPassword(req.session.userId);
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
