@@ -1033,17 +1033,34 @@
     async function loadQuickReplies() {
       try {
         const response = await fetch(`${API_URL}/api/canned-responses`, { credentials: 'include' });
+        
+        if (!response.ok) {
+          console.error('Failed to fetch quick replies:', response.status, response.statusText);
+          return;
+        }
+        
         const replies = await response.json();
+        console.log('Loaded quick replies:', replies);
         
         const select = document.getElementById('quickReplySelect');
+        if (!select) {
+          console.error('Quick reply select element not found');
+          return;
+        }
+        
         select.innerHTML = '<option value="">💬 Quick Replies</option>';
         
-        replies.forEach(reply => {
-          const option = document.createElement('option');
-          option.value = reply.content;
-          option.textContent = reply.title;
-          select.appendChild(option);
-        });
+        if (Array.isArray(replies) && replies.length > 0) {
+          replies.forEach(reply => {
+            const option = document.createElement('option');
+            option.value = reply.content;
+            option.textContent = reply.title;
+            select.appendChild(option);
+          });
+          console.log(`Loaded ${replies.length} quick replies`);
+        } else {
+          console.log('No quick replies found');
+        }
       } catch (error) {
         console.error('Failed to load quick replies:', error);
       }

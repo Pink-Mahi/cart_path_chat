@@ -20,7 +20,10 @@ export async function getCallRequests(limit = 100) {
 
 export async function getCallRequest(id) {
   const result = await query(
-    `SELECT * FROM call_requests WHERE id = $1`,
+    `SELECT cr.*, c.visitor_email 
+     FROM call_requests cr
+     LEFT JOIN conversations c ON cr.conversation_id = c.id
+     WHERE cr.id = $1`,
     [id]
   );
   return result.rows[0];
