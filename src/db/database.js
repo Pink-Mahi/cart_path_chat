@@ -101,6 +101,10 @@ export const getAllConversations = async (limit = 100, filters = {}) => {
     whereClause += ` AND c.assigned_to IS NULL`;
   }
 
+  // Exclude conversations that have scheduled visits or call requests
+  whereClause += ` AND NOT EXISTS (SELECT 1 FROM scheduled_visits WHERE conversation_id = c.id)`;
+  whereClause += ` AND NOT EXISTS (SELECT 1 FROM call_requests WHERE conversation_id = c.id)`;
+
   params.push(limit);
 
   const result = await query(
