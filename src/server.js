@@ -14,7 +14,8 @@ import {
   getAllConversations,
   updateConversationStatus,
   getConversation,
-  assignConversation
+  assignConversation,
+  query
 } from './db/database.js';
 import { getChatResponse, shouldEscalateToHuman } from './ai/openai.js';
 import { sendHumanNeededNotification } from './utils/email.js';
