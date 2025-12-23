@@ -431,6 +431,9 @@
         </div>
       </div>
       <div class="modal-body" id="modalMessages" style="display: flex; flex-direction: column;"></div>
+      <div id="typingIndicator" style="display: none; padding: 0.5rem 1rem; background: #f3f4f6; border-top: 1px solid #e5e7eb; font-size: 0.875rem; color: #6b7280; font-style: italic;">
+        <span id="typingText">Visitor is typing...</span>
+      </div>
       <div class="modal-footer">
         <select id="quickReplySelect" onchange="insertQuickReply()" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; margin-right: 0.5rem;">
           <option value="">💬 Quick Replies</option>
@@ -524,6 +527,8 @@
     let currentTab = 'conversations';
     let updateInterval = null;
     let conversationPollInterval = null;
+    let dashboardWs = null;
+    let typingTimeouts = new Map(); // Track typing timeouts per conversation
 
     async function checkAuth() {
       try {
@@ -1335,6 +1340,70 @@
       }
     }
 
+    function connectDashboardWebSocket() {
+      const wsUrl = API_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+      dashboardWs = new WebSocket(wsUrl);
+
+      dashboardWs.onopen = () => {
+        console.log('Dashboard WebSocket connected');
+      };
+
+      dashboardWs.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'visitor_typing') {
+            handleVisitorTyping(data.conversationId, data.visitorName, data.isTyping);
+          }
+        } catch (error) {
+          console.error('WebSocket message error:', error);
+        }
+      };
+
+      dashboardWs.onerror = (error) => {
+        console.error('Dashboard WebSocket error:', error);
+      };
+
+      dashboardWs.onclose = () => {
+        console.log('Dashboard WebSocket closed, reconnecting...');
+        setTimeout(connectDashboardWebSocket, 3000);
+      };
+    }
+
+    function handleVisitorTyping(conversationId, visitorName, isTyping) {
+      // Only show typing indicator if this conversation is currently open
+      if (currentConversationId !== conversationId) {
+        return;
+      }
+
+      const typingIndicator = document.getElementById('typingIndicator');
+      const typingText = document.getElementById('typingText');
+
+      if (isTyping) {
+        typingText.textContent = `${visitorName} is typing...`;
+        typingIndicator.style.display = 'block';
+
+        // Clear existing timeout for this conversation
+        if (typingTimeouts.has(conversationId)) {
+          clearTimeout(typingTimeouts.get(conversationId));
+        }
+
+        // Auto-hide after 3 seconds if no update
+        const timeout = setTimeout(() => {
+          typingIndicator.style.display = 'none';
+          typingTimeouts.delete(conversationId);
+        }, 3000);
+
+        typingTimeouts.set(conversationId, timeout);
+      } else {
+        typingIndicator.style.display = 'none';
+        if (typingTimeouts.has(conversationId)) {
+          clearTimeout(typingTimeouts.get(conversationId));
+          typingTimeouts.delete(conversationId);
+        }
+      }
+    }
+
     async function init() {
       const authenticated = await checkAuth();
       if (authenticated) {
@@ -1342,6 +1411,9 @@
         if (currentUser && currentUser.role === 'admin') {
           document.getElementById('knowledgeBaseBtn').style.display = 'inline-block';
         }
+        
+        // Connect to WebSocket for realtime updates
+        connectDashboardWebSocket();
         
         loadContent();
         // Wait a bit for currentUser to be set before loading team

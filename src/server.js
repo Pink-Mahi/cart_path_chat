@@ -134,6 +134,25 @@ wss.on('connection', (ws, req) => {
 async function handleChatMessage(ws, visitorId, message) {
   const { type, content, visitorName, visitorEmail, conversationId } = message;
   
+  // Handle typing indicator
+  if (type === 'typing') {
+    // Broadcast typing status to all connected clients (for dashboard)
+    const typingData = {
+      type: 'visitor_typing',
+      conversationId: conversationId || visitorId,
+      visitorName: visitorName || 'Visitor',
+      isTyping: message.isTyping
+    };
+    
+    // Broadcast to all connections
+    connections.forEach((clientWs) => {
+      if (clientWs !== ws && clientWs.readyState === 1) { // 1 = OPEN
+        clientWs.send(JSON.stringify(typingData));
+      }
+    });
+    return;
+  }
+  
   // Get or create conversation for all message types
   const conversation = await getOrCreateConversation(
     conversationId || visitorId,
