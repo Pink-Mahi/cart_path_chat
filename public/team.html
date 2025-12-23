@@ -182,6 +182,44 @@
       justify-content: flex-end;
       margin-top: 1.5rem;
     }
+    .schedule-grid {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .schedule-day {
+      display: grid;
+      grid-template-columns: 100px 1fr 1fr auto;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.75rem;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+    .schedule-day label {
+      font-weight: 500;
+      margin: 0;
+      font-size: 0.875rem;
+    }
+    .schedule-day input[type="time"] {
+      padding: 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.875rem;
+    }
+    .schedule-day input[type="checkbox"] {
+      width: auto;
+    }
+    .work-schedule-section {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e5e7eb;
+    }
+    .work-schedule-section h4 {
+      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+      color: #374151;
+    }
   </style>
 </head>
 <body>
@@ -238,6 +276,64 @@
           <label for="userPhone">Phone Number (E.164 format, e.g. +13609071807)</label>
           <input type="tel" id="userPhone" placeholder="+13609071807">
         </div>
+
+        <!-- Work Schedule Section -->
+        <div class="work-schedule-section" id="workScheduleSection">
+          <h4>📅 Notification Hours</h4>
+          <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 1rem;">Set when this user receives notifications</p>
+          
+          <div class="schedule-grid">
+            <div class="schedule-day">
+              <label>Monday</label>
+              <input type="time" id="edit_monday_start" value="09:00">
+              <input type="time" id="edit_monday_end" value="17:00">
+              <label><input type="checkbox" id="edit_monday_enabled" checked> On</label>
+            </div>
+            <div class="schedule-day">
+              <label>Tuesday</label>
+              <input type="time" id="edit_tuesday_start" value="09:00">
+              <input type="time" id="edit_tuesday_end" value="17:00">
+              <label><input type="checkbox" id="edit_tuesday_enabled" checked> On</label>
+            </div>
+            <div class="schedule-day">
+              <label>Wednesday</label>
+              <input type="time" id="edit_wednesday_start" value="09:00">
+              <input type="time" id="edit_wednesday_end" value="17:00">
+              <label><input type="checkbox" id="edit_wednesday_enabled" checked> On</label>
+            </div>
+            <div class="schedule-day">
+              <label>Thursday</label>
+              <input type="time" id="edit_thursday_start" value="09:00">
+              <input type="time" id="edit_thursday_end" value="17:00">
+              <label><input type="checkbox" id="edit_thursday_enabled" checked> On</label>
+            </div>
+            <div class="schedule-day">
+              <label>Friday</label>
+              <input type="time" id="edit_friday_start" value="09:00">
+              <input type="time" id="edit_friday_end" value="17:00">
+              <label><input type="checkbox" id="edit_friday_enabled" checked> On</label>
+            </div>
+            <div class="schedule-day">
+              <label>Saturday</label>
+              <input type="time" id="edit_saturday_start" value="09:00">
+              <input type="time" id="edit_saturday_end" value="17:00">
+              <label><input type="checkbox" id="edit_saturday_enabled" checked> On</label>
+            </div>
+            <div class="schedule-day">
+              <label>Sunday</label>
+              <input type="time" id="edit_sunday_start" value="09:00">
+              <input type="time" id="edit_sunday_end" value="17:00">
+              <label><input type="checkbox" id="edit_sunday_enabled" checked> On</label>
+            </div>
+            <div class="schedule-day">
+              <label>Lunch Break</label>
+              <input type="time" id="edit_lunch_break_start" value="12:00">
+              <input type="time" id="edit_lunch_break_end" value="13:00">
+              <label><input type="checkbox" id="edit_lunch_break_enabled"> On</label>
+            </div>
+          </div>
+        </div>
+
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" onclick="closeUserModal()">Cancel</button>
           <button type="submit" class="btn btn-primary">Save</button>
@@ -351,6 +447,27 @@
         document.getElementById('userPhone').value = user.phone_number || '';
         document.getElementById('passwordGroup').style.display = 'none';
         document.getElementById('userPassword').required = false;
+
+        // Load work schedule
+        if (user.work_schedule) {
+          const schedule = user.work_schedule;
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+          
+          days.forEach(day => {
+            if (schedule[day]) {
+              document.getElementById(`edit_${day}_start`).value = schedule[day].start || '09:00';
+              document.getElementById(`edit_${day}_end`).value = schedule[day].end || '17:00';
+              document.getElementById(`edit_${day}_enabled`).checked = schedule[day].enabled !== false;
+            }
+          });
+
+          if (schedule.lunch_break) {
+            document.getElementById('edit_lunch_break_start').value = schedule.lunch_break.start || '12:00';
+            document.getElementById('edit_lunch_break_end').value = schedule.lunch_break.end || '13:00';
+            document.getElementById('edit_lunch_break_enabled').checked = schedule.lunch_break.enabled === true;
+          }
+        }
+
         document.getElementById('userModal').classList.add('active');
       } catch (error) {
         console.error('Failed to load user:', error);
@@ -372,6 +489,24 @@
       const role = document.getElementById('userRole').value;
       const phone_number = document.getElementById('userPhone').value || null;
 
+      // Build work schedule object
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      const work_schedule = {};
+      
+      days.forEach(day => {
+        work_schedule[day] = {
+          start: document.getElementById(`edit_${day}_start`).value,
+          end: document.getElementById(`edit_${day}_end`).value,
+          enabled: document.getElementById(`edit_${day}_enabled`).checked
+        };
+      });
+
+      work_schedule.lunch_break = {
+        start: document.getElementById('edit_lunch_break_start').value,
+        end: document.getElementById('edit_lunch_break_end').value,
+        enabled: document.getElementById('edit_lunch_break_enabled').checked
+      };
+
       try {
         let response;
         
@@ -381,7 +516,7 @@
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ name, email, role, phone_number })
+            body: JSON.stringify({ name, email, role, phone_number, work_schedule })
           });
         } else {
           // Create new user
@@ -398,6 +533,7 @@
           throw new Error(error.error || 'Failed to save user');
         }
 
+        alert('User saved successfully!');
         closeUserModal();
         loadUsers();
       } catch (error) {

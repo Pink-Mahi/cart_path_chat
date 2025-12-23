@@ -76,7 +76,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 // Update user (admin only, or self for basic info)
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
-    const { name, email, role, phone_number, is_active } = req.body;
+    const { name, email, role, phone_number, is_active, work_schedule } = req.body;
 
     // Check permissions
     const isSelf = req.session.userId === req.params.id;
@@ -86,11 +86,27 @@ router.patch('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    // Get target user to check if admin is editing another admin
+    const targetUser = await getUserById(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Agents cannot edit admins
+    if (!isAdmin && targetUser.role === 'admin') {
+      return res.status(403).json({ error: 'Agents cannot edit admin users' });
+    }
+
     // Only admins can change role and is_active
     const updates = {};
     if (name !== undefined) updates.name = name;
     if (email !== undefined) updates.email = email;
     if (phone_number !== undefined) updates.phone_number = phone_number;
+    
+    // Admins can edit anyone's work schedule, users can edit their own
+    if (work_schedule !== undefined && (isAdmin || isSelf)) {
+      updates.work_schedule = work_schedule;
+    }
     
     if (isAdmin) {
       if (role !== undefined) updates.role = role;
