@@ -420,7 +420,10 @@
           <div style="font-size: 0.875rem; color: #6b7280;" id="modalVisitorEmail"></div>
           <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;" id="modalAssignedTo"></div>
         </div>
-        <div style="display: flex; gap: 0.5rem;">
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <select id="reassignSelect" onchange="reassignConversation()" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; display: none;">
+            <option value="">Reassign to...</option>
+          </select>
           <button class="btn btn-primary" onclick="assignToMe()" id="assignBtn" style="display: none;">Assign to Me</button>
           <button class="btn btn-primary" onclick="markResolved()" id="resolveBtn" style="display: none;">Mark Resolved</button>
           <button class="btn btn-secondary" onclick="closeModal()">Close</button>
@@ -869,15 +872,18 @@
         const assignedToEl = document.getElementById('modalAssignedTo');
         const assignBtn = document.getElementById('assignBtn');
         const resolveBtn = document.getElementById('resolveBtn');
+        const reassignSelect = document.getElementById('reassignSelect');
         
         if (data.conversation.assigned_to) {
           assignedToEl.textContent = `👤 Assigned to: ${data.conversation.assigned_to_name || 'Unknown'}`;
           assignBtn.style.display = 'none';
           resolveBtn.style.display = data.conversation.status !== 'resolved' ? 'inline-block' : 'none';
+          reassignSelect.style.display = 'inline-block';
         } else {
           assignedToEl.textContent = '⚠️ Unassigned';
           assignBtn.style.display = 'inline-block';
           resolveBtn.style.display = 'none';
+          reassignSelect.style.display = 'none';
         }
         
         const messagesContainer = document.getElementById('modalMessages');
@@ -885,8 +891,9 @@
           <div class="message message-${msg.sender}">${msg.content}</div>
         `).join('');
         
-        // Load quick replies
+        // Load quick replies and team members for reassignment
         loadQuickReplies();
+        loadTeamMembersForReassign();
         
         document.getElementById('conversationModal').classList.add('active');
       } catch (error) {
@@ -1072,6 +1079,57 @@
         }
       } catch (error) {
         console.error('Failed to load quick replies:', error);
+      }
+    }
+
+    async function loadTeamMembersForReassign() {
+      try {
+        const response = await fetch(`${API_URL}/api/users`, { credentials: 'include' });
+        const users = await response.json();
+        
+        const select = document.getElementById('reassignSelect');
+        if (!select) return;
+        
+        select.innerHTML = '<option value="">Reassign to...</option>';
+        
+        users.forEach(user => {
+          const option = document.createElement('option');
+          option.value = user.id;
+          option.textContent = `${user.name} (${user.role})`;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Failed to load team members:', error);
+      }
+    }
+
+    async function reassignConversation() {
+      const select = document.getElementById('reassignSelect');
+      const userId = select.value;
+      
+      if (!userId || !currentConversationId) {
+        select.value = '';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/conversations/${currentConversationId}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ userId })
+        });
+
+        if (response.ok) {
+          openConversation(currentConversationId);
+        } else {
+          alert('Failed to reassign conversation');
+          select.value = '';
+        }
+      } catch (error) {
+        console.error('Failed to reassign:', error);
+        alert('Failed to reassign conversation');
+        select.value = '';
       }
     }
 
