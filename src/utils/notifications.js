@@ -38,25 +38,25 @@ export async function notifyAdmins(message, type = 'new_chat') {
 }
 
 export async function notifyAdminsNewChat(conversationId, adminPanelUrl) {
-  const link = adminPanelUrl ? `${adminPanelUrl}/admin.html` : null;
+  const link = adminPanelUrl ? `${adminPanelUrl}/dashboard.html` : null;
   const message = link
-    ? `Cart Path Cleaning: New visitor message. Check admin panel: ${link}`
-    : `Cart Path Cleaning: New visitor message. Check admin panel.`;
+    ? `Cart Path Cleaning: New visitor message. Check dashboard: ${link}`
+    : `Cart Path Cleaning: New visitor message. Check dashboard.`;
   
   await notifyAdmins(message, 'new_chat');
 }
 
 export async function notifyAdminsNeedsHuman(conversationId, adminPanelUrl) {
-  const link = adminPanelUrl ? `${adminPanelUrl}/admin.html` : null;
+  const link = adminPanelUrl ? `${adminPanelUrl}/dashboard.html` : null;
   const message = link
-    ? `Cart Path Cleaning: Human response needed. Check admin panel: ${link}`
-    : `Cart Path Cleaning: Human response needed. Check admin panel.`;
+    ? `Cart Path Cleaning: Human response needed. Check dashboard: ${link}`
+    : `Cart Path Cleaning: Human response needed. Check dashboard.`;
   
   await notifyAdmins(message, 'needs_human');
 }
 
 export async function notifyAdminsScheduledVisit(visitDate, propertyAddress, adminPanelUrl) {
-  const link = adminPanelUrl ? `${adminPanelUrl}/scheduled-visits.html` : null;
+  const link = adminPanelUrl ? `${adminPanelUrl}/dashboard.html` : null;
   const message = link
     ? `Cart Path Cleaning: Visit scheduled for ${visitDate} at ${propertyAddress}. ${link}`
     : `Cart Path Cleaning: Visit scheduled for ${visitDate} at ${propertyAddress}.`;
@@ -65,7 +65,7 @@ export async function notifyAdminsScheduledVisit(visitDate, propertyAddress, adm
 }
 
 export async function notifyAdminsCallRequest(visitorName, visitorPhone, adminPanelUrl) {
-  const link = adminPanelUrl ? `${adminPanelUrl}/call-requests.html` : null;
+  const link = adminPanelUrl ? `${adminPanelUrl}/dashboard.html` : null;
   const message = link
     ? `Cart Path Cleaning: Call back requested by ${visitorName} (${visitorPhone}). ${link}`
     : `Cart Path Cleaning: Call back requested by ${visitorName} (${visitorPhone}).`;
