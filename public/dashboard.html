@@ -431,7 +431,7 @@
         </div>
       </div>
       <div class="modal-body" id="modalMessages" style="display: flex; flex-direction: column;"></div>
-      <div id="typingIndicator" style="display: none; padding: 0.75rem 1.5rem; background: #fef3c7; border-top: 1px solid #fbbf24; border-bottom: 1px solid #fbbf24; font-size: 0.875rem; color: #92400e; font-style: italic; font-weight: 500; flex-shrink: 0; z-index: 10;">
+      <div id="typingIndicator" style="display: block; visibility: hidden; padding: 0.75rem 1.5rem; background: #fef3c7; border-top: 2px solid #fbbf24; border-bottom: 2px solid #fbbf24; font-size: 0.875rem; color: #92400e; font-style: italic; font-weight: 600; flex-shrink: 0; z-index: 10; min-height: 45px;">
         <span id="typingText">💬 Visitor is typing...</span>
       </div>
       <div class="modal-footer">
@@ -1391,8 +1391,8 @@
       console.log('Typing indicator element:', typingIndicator);
 
       if (isTyping) {
-        typingText.textContent = `${visitorName} is typing...`;
-        typingIndicator.style.display = 'block';
+        typingText.textContent = `💬 ${visitorName} is typing...`;
+        typingIndicator.style.visibility = 'visible';
         console.log('Showing typing indicator');
 
         // Clear existing timeout for this conversation
@@ -1402,14 +1402,14 @@
 
         // Auto-hide after 3 seconds if no update
         const timeout = setTimeout(() => {
-          typingIndicator.style.display = 'none';
+          typingIndicator.style.visibility = 'hidden';
           typingTimeouts.delete(conversationId);
           console.log('Auto-hiding typing indicator after timeout');
         }, 3000);
 
         typingTimeouts.set(conversationId, timeout);
       } else {
-        typingIndicator.style.display = 'none';
+        typingIndicator.style.visibility = 'hidden';
         console.log('Hiding typing indicator');
         if (typingTimeouts.has(conversationId)) {
           clearTimeout(typingTimeouts.get(conversationId));
