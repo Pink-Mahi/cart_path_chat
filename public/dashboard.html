@@ -534,7 +534,7 @@
         }
 
         container.innerHTML = visits.map(visit => `
-          <div class="conversation-card" onclick="window.open('/scheduled-visits.html', '_blank')">
+          <div class="conversation-card" onclick="openVisitDetail('${visit.id}')">
             <div class="conversation-header">
               <div class="visitor-name">${visit.visitor_name}</div>
               <span class="status-badge status-${visit.status}">${visit.status}</span>
@@ -563,7 +563,7 @@
         }
 
         container.innerHTML = calls.map(call => `
-          <div class="conversation-card" onclick="window.open('/call-requests.html', '_blank')">
+          <div class="conversation-card" onclick="openCallDetail('${call.id}')">
             <div class="conversation-header">
               <div class="visitor-name">${call.visitor_name}</div>
               <span class="status-badge status-${call.status}">${call.status}</span>
@@ -654,11 +654,11 @@
                 </div>
               </div>
               <div class="chat-content" id="content-${msg.id}">${msg.content}</div>
-              <div id="edit-${msg.id}" style="display: none; margin-top: 0.5rem;">
-                <input type="text" id="input-${msg.id}" value="${msg.content.replace(/"/g, '&quot;')}" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+              <div id="edit-${msg.id}" style="display: none; margin-top: 0.5rem;" onclick="event.stopPropagation()">
+                <input type="text" id="input-${msg.id}" value="${msg.content.replace(/"/g, '&quot;')}" onkeypress="if(event.key==='Enter') saveTeamMessageEdit('${msg.id}')" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
                 <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-                  <button onclick="saveTeamMessageEdit('${msg.id}')" style="padding: 0.25rem 0.75rem; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Save</button>
-                  <button onclick="cancelTeamMessageEdit('${msg.id}')" style="padding: 0.25rem 0.75rem; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Cancel</button>
+                  <button onclick="event.stopPropagation(); saveTeamMessageEdit('${msg.id}')" style="padding: 0.25rem 0.75rem; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Save</button>
+                  <button onclick="event.stopPropagation(); cancelTeamMessageEdit('${msg.id}')" style="padding: 0.25rem 0.75rem; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Cancel</button>
                 </div>
               </div>
             </div>
@@ -717,6 +717,7 @@
       
       if (!content) {
         alert('Message cannot be empty');
+        input.focus();
         return;
       }
 
@@ -730,14 +731,18 @@
         
         if (!response.ok) {
           const error = await response.json();
+          console.error('Edit failed:', error);
           alert('Failed to edit message: ' + (error.error || 'Unknown error'));
+          input.focus();
           return;
         }
         
-        loadTeamChat();
+        // Successfully saved, reload chat
+        await loadTeamChat();
       } catch (error) {
         console.error('Failed to edit message:', error);
         alert('Failed to edit message. Please try again.');
+        input.focus();
       }
     }
 
