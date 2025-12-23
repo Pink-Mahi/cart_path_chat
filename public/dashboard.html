@@ -30,6 +30,31 @@
       }
     }
 
+    @keyframes tabPulse {
+      0%, 100% {
+        background-color: transparent;
+      }
+      50% {
+        background-color: rgba(239, 68, 68, 0.15);
+      }
+    }
+
+    .tab.has-new {
+      animation: tabPulse 1.5s ease-in-out infinite;
+      position: relative;
+    }
+    .tab.has-new::after {
+      content: '';
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 8px;
+      height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      animation: pulse 1s ease-in-out infinite;
+    }
+
     /* Main Layout */
     .dashboard-container {
       display: grid;
@@ -588,10 +613,10 @@
     <!-- Main Content -->
     <div class="main-content">
       <div class="content-tabs">
-        <button class="tab active" onclick="switchTab('conversations')">💬 Conversations</button>
-        <button class="tab" onclick="switchTab('visits')">📅 Scheduled Visits</button>
-        <button class="tab" onclick="switchTab('calls')">📞 Call Requests</button>
-        <button class="tab" onclick="switchTab('contacts')">📧 Contact Submissions</button>
+        <button class="tab active" id="tab-conversations" onclick="switchTab('conversations')">💬 Conversations</button>
+        <button class="tab" id="tab-visits" onclick="switchTab('visits')">📅 Scheduled Visits</button>
+        <button class="tab" id="tab-calls" onclick="switchTab('calls')">📞 Call Requests</button>
+        <button class="tab" id="tab-contacts" onclick="switchTab('contacts')">📧 Contact Submissions</button>
       </div>
       <div class="content-body" id="contentBody">
         <!-- Dynamic content loaded here -->
@@ -874,7 +899,60 @@
       currentTab = tab;
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       event.target.classList.add('active');
+      // Remove notification indicator when tab is clicked
+      document.getElementById(`tab-${tab}`).classList.remove('has-new');
       loadContent();
+    }
+
+    // Check for new/unassigned items and update tab indicators
+    async function updateTabIndicators() {
+      try {
+        // Check conversations for unassigned
+        const convResponse = await fetch(`${API_URL}/api/conversations`, { credentials: 'include' });
+        const conversations = await convResponse.json();
+        const hasNewConversations = conversations.some(c => c.status === 'unassigned' || c.status === 'needs_human');
+        const convTab = document.getElementById('tab-conversations');
+        if (hasNewConversations && currentTab !== 'conversations') {
+          convTab.classList.add('has-new');
+        } else {
+          convTab.classList.remove('has-new');
+        }
+
+        // Check scheduled visits for pending
+        const visitsResponse = await fetch(`${API_URL}/api/scheduled-visits`, { credentials: 'include' });
+        const visits = await visitsResponse.json();
+        const hasNewVisits = visits.some(v => v.status === 'pending');
+        const visitsTab = document.getElementById('tab-visits');
+        if (hasNewVisits && currentTab !== 'visits') {
+          visitsTab.classList.add('has-new');
+        } else {
+          visitsTab.classList.remove('has-new');
+        }
+
+        // Check call requests for pending
+        const callsResponse = await fetch(`${API_URL}/api/call-requests`, { credentials: 'include' });
+        const calls = await callsResponse.json();
+        const hasNewCalls = calls.some(c => c.status === 'pending');
+        const callsTab = document.getElementById('tab-calls');
+        if (hasNewCalls && currentTab !== 'calls') {
+          callsTab.classList.add('has-new');
+        } else {
+          callsTab.classList.remove('has-new');
+        }
+
+        // Check contact submissions for pending
+        const contactsResponse = await fetch(`${API_URL}/api/contact-submissions`, { credentials: 'include' });
+        const contacts = await contactsResponse.json();
+        const hasNewContacts = contacts.some(c => c.status === 'pending');
+        const contactsTab = document.getElementById('tab-contacts');
+        if (hasNewContacts && currentTab !== 'contacts') {
+          contactsTab.classList.add('has-new');
+        } else {
+          contactsTab.classList.remove('has-new');
+        }
+      } catch (error) {
+        console.error('Error updating tab indicators:', error);
+      }
     }
 
     async function loadContent() {
@@ -1892,12 +1970,14 @@
           loadTeam();
         }, 100);
         loadTeamChat();
+        updateTabIndicators();
         
         // Update every 5 seconds
         updateInterval = setInterval(() => {
           loadContent();
           loadTeam();
           loadTeamChat();
+          updateTabIndicators();
         }, 5000);
         
         // Update presence every minute
