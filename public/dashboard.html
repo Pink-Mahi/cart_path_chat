@@ -534,7 +534,7 @@
         }
 
         container.innerHTML = visits.map(visit => `
-          <div class="conversation-card">
+          <div class="conversation-card" onclick="window.open('/scheduled-visits.html', '_blank')">
             <div class="conversation-header">
               <div class="visitor-name">${visit.visitor_name}</div>
               <span class="status-badge status-${visit.status}">${visit.status}</span>
@@ -563,7 +563,7 @@
         }
 
         container.innerHTML = calls.map(call => `
-          <div class="conversation-card">
+          <div class="conversation-card" onclick="window.open('/call-requests.html', '_blank')">
             <div class="conversation-header">
               <div class="visitor-name">${call.visitor_name}</div>
               <span class="status-badge status-${call.status}">${call.status}</span>
@@ -659,16 +659,26 @@
       if (!content) return;
 
       try {
-        await fetch(`${API_URL}/api/team-chat`, {
+        const response = await fetch(`${API_URL}/api/team-chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ content })
         });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          console.error('Failed to send message:', error);
+          alert('Failed to send message: ' + (error.error || 'Unknown error'));
+          return;
+        }
+        
         input.value = '';
-        loadTeamChat();
+        // Small delay to ensure message is saved
+        setTimeout(() => loadTeamChat(), 100);
       } catch (error) {
         console.error('Failed to send message:', error);
+        alert('Failed to send message. Please try again.');
       }
     }
 
