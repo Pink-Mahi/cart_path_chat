@@ -263,8 +263,13 @@
         <div>
           <div class="visitor-name" id="modalVisitorName"></div>
           <div style="font-size: 0.875rem; color: #6b7280;" id="modalVisitorEmail"></div>
+          <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;" id="modalAssignedTo"></div>
         </div>
-        <button class="btn btn-secondary" onclick="closeChat()">Close</button>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-primary" onclick="assignToMe()" id="assignBtn" style="display: none;">Assign to Me</button>
+          <button class="btn btn-primary" onclick="markResolved()" id="resolveBtn" style="display: none;">Mark Resolved</button>
+          <button class="btn btn-secondary" onclick="closeChat()">Close</button>
+        </div>
       </div>
       <div id="chatMessages" class="chat-messages"></div>
       <div id="quickRepliesContainer" style="padding: 0.75rem; border-top: 1px solid #e5e7eb; background: #f9fafb; display: none;">
@@ -318,19 +323,33 @@
           return;
         }
         
-        container.innerHTML = conversations.map(conv => `
-          <div class="conversation-card" onclick="openChat('${conv.id}')">
-            <div class="conversation-header">
-              <div class="visitor-name">${conv.visitor_name || 'Anonymous'}</div>
-              <span class="status-badge status-${conv.status}">${conv.status.replace('_', ' ')}</span>
+        container.innerHTML = conversations.map(conv => {
+          const statusText = conv.status === 'unassigned' ? 'Unassigned' :
+                            conv.status === 'assigned' ? 'In Progress' :
+                            conv.status === 'waiting' ? 'Waiting' :
+                            conv.status === 'resolved' ? 'Resolved' :
+                            conv.status === 'needs_human' ? 'Needs Human' : conv.status;
+          
+          const assignedInfo = conv.assigned_to_name ? 
+            `<div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">👤 ${conv.assigned_to_name}</div>` : '';
+          
+          return `
+            <div class="conversation-card" onclick="openChat('${conv.id}')">
+              <div class="conversation-header">
+                <div>
+                  <div class="visitor-name">${conv.visitor_name || 'Anonymous'}</div>
+                  ${assignedInfo}
+                </div>
+                <span class="status-badge status-${conv.status}">${statusText}</span>
+              </div>
+              <div class="last-message">${conv.last_message || 'No messages yet'}</div>
+              <div class="conversation-meta">
+                <span>${conv.visitor_email || 'No email'}</span>
+                <span>${conv.message_count} messages</span>
+              </div>
             </div>
-            <div class="last-message">${conv.last_message || 'No messages yet'}</div>
-            <div class="conversation-meta">
-              <span>${conv.visitor_email || 'No email'}</span>
-              <span>${conv.message_count} messages</span>
-            </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
       } catch (error) {
         console.error('Failed to load conversations:', error);
         document.getElementById('conversations').innerHTML = '<div class="loading">Failed to load conversations</div>';
@@ -346,6 +365,21 @@
         
         document.getElementById('modalVisitorName').textContent = data.conversation.visitor_name || 'Anonymous';
         document.getElementById('modalVisitorEmail').textContent = data.conversation.visitor_email || 'No email provided';
+        
+        // Show assignment info and action buttons
+        const assignedToEl = document.getElementById('modalAssignedTo');
+        const assignBtn = document.getElementById('assignBtn');
+        const resolveBtn = document.getElementById('resolveBtn');
+        
+        if (data.conversation.assigned_to) {
+          assignedToEl.textContent = `👤 Assigned to: ${data.conversation.assigned_to_name || 'Unknown'}`;
+          assignBtn.style.display = 'none';
+          resolveBtn.style.display = data.conversation.status !== 'resolved' ? 'inline-block' : 'none';
+        } else {
+          assignedToEl.textContent = '⚠️ Unassigned';
+          assignBtn.style.display = 'inline-block';
+          resolveBtn.style.display = 'none';
+        }
         
         const messagesContainer = document.getElementById('chatMessages');
         messagesContainer.innerHTML = data.messages.map(msg => `
@@ -406,6 +440,47 @@
       loadConversations();
     }
 
+    async function assignToMe() {
+      if (!currentConversationId || !currentUser) return;
+      
+      try {
+        const response = await fetch(`${API_URL}/api/conversations/${currentConversationId}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ userId: currentUser.id })
+        });
+        
+        if (response.ok) {
+          openChat(currentConversationId);
+          loadConversations();
+        }
+      } catch (error) {
+        console.error('Failed to assign conversation:', error);
+        alert('Failed to assign conversation');
+      }
+    }
+
+    async function markResolved() {
+      if (!currentConversationId) return;
+      
+      try {
+        const response = await fetch(`${API_URL}/api/conversations/${currentConversationId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ status: 'resolved' })
+        });
+        
+        if (response.ok) {
+          closeChat();
+        }
+      } catch (error) {
+        console.error('Failed to mark as resolved:', error);
+        alert('Failed to mark as resolved');
+      }
+    }
+
     async function sendReply() {
       const input = document.getElementById('replyInput');
       const content = input.value.trim();
@@ -416,11 +491,23 @@
         const response = await fetch(`${API_URL}/api/conversations/${currentConversationId}/reply`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ content })
         });
         
         if (response.ok) {
           input.value = '';
+          
+          // Auto-assign to current user when they reply
+          if (currentUser) {
+            await fetch(`${API_URL}/api/conversations/${currentConversationId}/assign`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ userId: currentUser.id })
+            });
+          }
+          
           openChat(currentConversationId);
         }
       } catch (error) {
