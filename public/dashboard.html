@@ -1127,11 +1127,13 @@
         if (response.ok) {
           loadContent();
         } else {
-          alert('Failed to delete conversation');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Delete failed:', response.status, errorData);
+          alert(`Failed to delete conversation (${response.status}). Please make sure the backend is deployed with the latest changes.`);
         }
       } catch (error) {
         console.error('Failed to delete conversation:', error);
-        alert('Failed to delete conversation');
+        alert('Failed to delete conversation. Please check if the backend is running.');
       }
     }
 
@@ -1149,11 +1151,13 @@
         if (response.ok) {
           loadContent();
         } else {
-          alert('Failed to delete visit');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Delete failed:', response.status, errorData);
+          alert(`Failed to delete visit (${response.status}). Please make sure the backend is deployed with the latest changes.`);
         }
       } catch (error) {
         console.error('Failed to delete visit:', error);
-        alert('Failed to delete visit');
+        alert('Failed to delete visit. Please check if the backend is running.');
       }
     }
 
@@ -1171,11 +1175,13 @@
         if (response.ok) {
           loadContent();
         } else {
-          alert('Failed to delete call request');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Delete failed:', response.status, errorData);
+          alert(`Failed to delete call request (${response.status}). Please make sure the backend is deployed with the latest changes.`);
         }
       } catch (error) {
         console.error('Failed to delete call request:', error);
-        alert('Failed to delete call request');
+        alert('Failed to delete call request. Please check if the backend is running.');
       }
     }
 
