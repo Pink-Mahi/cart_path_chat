@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team Management - Cart Path Cleaning</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+    .header {
+      background: #10b981;
+      color: white;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+    }
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .nav-links a:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #10b981;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #059669;
+    }
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+    }
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    .users-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    .user-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .user-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 1rem;
+    }
+    .user-info h3 {
+      font-size: 1.25rem;
+      margin-bottom: 0.25rem;
+    }
+    .user-info p {
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+    .role-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .role-admin {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .role-agent {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .user-details {
+      display: grid;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+    }
+    .user-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      font-size: 0.875rem;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .form-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <h1>👥 Team Management</h1>
+      <div class="nav-links">
+        <a href="/admin.html">💬 Chats</a>
+        <a href="/scheduled-visits.html">📅 Visits</a>
+        <a href="/call-requests.html">📞 Call Requests</a>
+        <a href="/canned-responses.html">💬 Quick Replies</a>
+        <a href="/team.html">👥 Team</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="page-header">
+      <h2>Team Members</h2>
+      <button class="btn btn-primary" onclick="openAddUserModal()">+ Add Team Member</button>
+    </div>
+
+    <div id="usersList" class="users-grid">
+      <div style="text-align: center; padding: 2rem; color: #6b7280;">Loading team members...</div>
+    </div>
+  </div>
+
+  <!-- Add/Edit User Modal -->
+  <div id="userModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add Team Member</h3>
+        <button class="btn btn-secondary" onclick="closeUserModal()">Close</button>
+      </div>
+      <form id="userForm" onsubmit="saveUser(event)">
+        <div class="form-group">
+          <label for="userName">Name *</label>
+          <input type="text" id="userName" required>
+        </div>
+        <div class="form-group">
+          <label for="userEmail">Email *</label>
+          <input type="email" id="userEmail" required>
+        </div>
+        <div class="form-group" id="passwordGroup">
+          <label for="userPassword">Password *</label>
+          <input type="password" id="userPassword">
+        </div>
+        <div class="form-group">
+          <label for="userRole">Role *</label>
+          <select id="userRole" required>
+            <option value="admin">Admin (Full Access)</option>
+            <option value="agent">Agent (Limited Access)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="userPhone">Phone Number (E.164 format, e.g. +13609071807)</label>
+          <input type="tel" id="userPhone" placeholder="+13609071807">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeUserModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin;
+    let currentUser = null;
+    let editingUserId = null;
+
+    async function checkAuth() {
+      try {
+        const response = await fetch(`${API_URL}/api/auth/status`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+
+        if (!data.authenticated) {
+          window.location.href = '/login.html';
+          return false;
+        }
+
+        currentUser = data.user;
+        
+        if (currentUser.role !== 'admin') {
+          alert('Access denied. Admin role required.');
+          window.location.href = '/admin.html';
+          return false;
+        }
+
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = '/login.html';
+        return false;
+      }
+    }
+
+    async function loadUsers() {
+      try {
+        const response = await fetch(`${API_URL}/api/users`, {
+          credentials: 'include'
+        });
+        const users = await response.json();
+
+        const container = document.getElementById('usersList');
+        
+        if (users.length === 0) {
+          container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #6b7280;">No team members yet</div>';
+          return;
+        }
+
+        container.innerHTML = users.map(user => `
+          <div class="user-card">
+            <div class="user-header">
+              <div class="user-info">
+                <h3>${user.name}</h3>
+                <p>${user.email}</p>
+              </div>
+              <span class="role-badge role-${user.role}">${user.role}</span>
+            </div>
+            <div class="user-details">
+              ${user.phone_number ? `<div>📱 ${user.phone_number}</div>` : ''}
+              <div>Created: ${new Date(user.created_at).toLocaleDateString()}</div>
+              ${user.last_seen ? `<div>Last seen: ${new Date(user.last_seen).toLocaleString()}</div>` : ''}
+            </div>
+            <div class="user-actions">
+              <button class="btn btn-primary" onclick="editUser('${user.id}')">Edit</button>
+              ${currentUser.id !== user.id ? `<button class="btn btn-danger" onclick="deactivateUser('${user.id}', '${user.name}')">Deactivate</button>` : ''}
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load users:', error);
+        document.getElementById('usersList').innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">Failed to load team members</div>';
+      }
+    }
+
+    function openAddUserModal() {
+      editingUserId = null;
+      document.getElementById('modalTitle').textContent = 'Add Team Member';
+      document.getElementById('userForm').reset();
+      document.getElementById('passwordGroup').style.display = 'block';
+      document.getElementById('userPassword').required = true;
+      document.getElementById('userModal').classList.add('active');
+    }
+
+    async function editUser(userId) {
+      try {
+        const response = await fetch(`${API_URL}/api/users/${userId}`, {
+          credentials: 'include'
+        });
+        const user = await response.json();
+
+        editingUserId = userId;
+        document.getElementById('modalTitle').textContent = 'Edit Team Member';
+        document.getElementById('userName').value = user.name;
+        document.getElementById('userEmail').value = user.email;
+        document.getElementById('userRole').value = user.role;
+        document.getElementById('userPhone').value = user.phone_number || '';
+        document.getElementById('passwordGroup').style.display = 'none';
+        document.getElementById('userPassword').required = false;
+        document.getElementById('userModal').classList.add('active');
+      } catch (error) {
+        console.error('Failed to load user:', error);
+        alert('Failed to load user details');
+      }
+    }
+
+    function closeUserModal() {
+      document.getElementById('userModal').classList.remove('active');
+      editingUserId = null;
+    }
+
+    async function saveUser(event) {
+      event.preventDefault();
+
+      const name = document.getElementById('userName').value;
+      const email = document.getElementById('userEmail').value;
+      const password = document.getElementById('userPassword').value;
+      const role = document.getElementById('userRole').value;
+      const phone_number = document.getElementById('userPhone').value || null;
+
+      try {
+        let response;
+        
+        if (editingUserId) {
+          // Update existing user
+          response = await fetch(`${API_URL}/api/users/${editingUserId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ name, email, role, phone_number })
+          });
+        } else {
+          // Create new user
+          response = await fetch(`${API_URL}/api/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ name, email, password, role, phone_number })
+          });
+        }
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to save user');
+        }
+
+        closeUserModal();
+        loadUsers();
+      } catch (error) {
+        console.error('Failed to save user:', error);
+        alert(error.message);
+      }
+    }
+
+    async function deactivateUser(userId, userName) {
+      if (!confirm(`Are you sure you want to deactivate ${userName}? They will no longer be able to login.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/users/${userId}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to deactivate user');
+        }
+
+        loadUsers();
+      } catch (error) {
+        console.error('Failed to deactivate user:', error);
+        alert('Failed to deactivate user');
+      }
+    }
+
+    async function init() {
+      const authenticated = await checkAuth();
+      if (authenticated) {
+        loadUsers();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
