@@ -28,14 +28,19 @@
       display: flex;
       gap: 1rem;
     }
-    .nav-links a {
+    .nav-links a, .nav-links button {
       color: white;
       text-decoration: none;
       padding: 0.5rem 1rem;
       border-radius: 6px;
       transition: background 0.2s;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      font-family: inherit;
     }
-    .nav-links a:hover {
+    .nav-links a:hover, .nav-links button:hover {
       background: rgba(255,255,255,0.2);
     }
     .container {
@@ -158,10 +163,10 @@
     <div class="container">
       <h1>💬 Quick Replies</h1>
       <div class="nav-links">
+        <button onclick="window.location.href='/dashboard.html'">← Back to Dashboard</button>
         <a href="/admin.html">💬 Chats</a>
         <a href="/scheduled-visits.html">📅 Visits</a>
         <a href="/call-requests.html">📞 Call Requests</a>
-        <a href="/canned-responses.html">💬 Quick Replies</a>
       </div>
     </div>
   </div>
