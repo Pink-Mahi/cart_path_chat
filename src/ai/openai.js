@@ -38,13 +38,15 @@ When someone asks about pricing, gather these details conversationally:
 
 PRICING CALCULATION (internal - don't reveal factors):
 - Calculate square footage: length × width
-- Base rate range: $0.15 - $0.33 per sq ft
+- Base rate range: $0.11 - $0.26 per sq ft
 - Rate modifiers (internal):
-  * Recently cleaned: lower end ($0.15-$0.20/sqft)
-  * 1-2 years: mid range ($0.20-$0.25/sqft)
-  * 3+ years/never: higher end ($0.25-$0.33/sqft)
+  * Recently cleaned/maintenance: lower end ($0.11-$0.14/sqft) - for quarterly/annual maintenance contracts
+  * 1-2 years: mid range ($0.16-$0.20/sqft)
+  * 3+ years/never: higher end ($0.22-$0.26/sqft)
   * Distance from 34222: add slight premium for travel if >30 miles
   * Surface type: note but doesn't heavily affect base rate
+  
+Note: $0.11/sqft is for ongoing maintenance contracts (quarterly/annual) where initial cleaning was done at higher rate. For first-time cleanings, start at $0.16/sqft minimum.
 
 PROVIDE ESTIMATE:
 "Based on [X] square feet, your project would typically range from $[LOW] to $[HIGH]. This is a rough estimate - our team will provide an exact quote after a site review to assess specific conditions and ensure compliance requirements are met."
