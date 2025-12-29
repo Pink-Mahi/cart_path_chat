@@ -113,7 +113,7 @@ wss.on('connection', (ws, req) => {
         
         ws.send(JSON.stringify({
           type: 'system',
-          content: 'Connected to Cart Path Cleaning support',
+          content: 'Hi 👋\n\nWe help golf courses, HOAs, and municipalities clean cart paths using a closed-loop system that prevents storm drain runoff and environmental violations.\n\nHow can I help today?\n• Get a Quote\n• Environmental Compliance Questions\n• How the System Works\n• Schedule a Site Review\n• Talk to a Specialist',
           visitorId
         }));
         return;
