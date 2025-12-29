@@ -181,7 +181,19 @@ async function handleChatMessage(ws, visitorId, message) {
     const isFirstVisitorMessage = existingMessages.length === 0;
 
     // Save visitor message
-    await addMessage(conversation.id, 'visitor', content);
+    const visitorMessage = await addMessage(conversation.id, 'visitor', content);
+
+    // Broadcast visitor message to all connected clients (including dashboard)
+    const visitorMessageData = {
+      type: 'newMessage',
+      conversationId: conversation.id,
+      message: visitorMessage
+    };
+    connections.forEach((clientWs) => {
+      if (clientWs !== ws && clientWs.readyState === 1) {
+        clientWs.send(JSON.stringify(visitorMessageData));
+      }
+    });
 
     if (isFirstVisitorMessage) {
       await sendWhatsAppNotification(conversation, content, 'new_chat');
@@ -219,9 +231,21 @@ async function handleChatMessage(ws, visitorId, message) {
     const { reply, needsHuman } = await getChatResponse(content, history);
     
     // Save bot response
-    await addMessage(conversation.id, 'bot', reply);
+    const botMessage = await addMessage(conversation.id, 'bot', reply);
     
-    // Send response to client
+    // Broadcast bot response to all connected clients (including dashboard)
+    const botMessageData = {
+      type: 'newMessage',
+      conversationId: conversation.id,
+      message: botMessage
+    };
+    connections.forEach((clientWs) => {
+      if (clientWs.readyState === 1) {
+        clientWs.send(JSON.stringify(botMessageData));
+      }
+    });
+    
+    // Send response to original client (visitor)
     ws.send(JSON.stringify({
       type: 'bot',
       content: reply,
