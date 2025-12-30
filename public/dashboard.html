@@ -675,7 +675,7 @@
         <select id="quickReplySelect" onchange="insertQuickReply()" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; margin-right: 0.5rem;">
           <option value="">💬 Quick Replies</option>
         </select>
-        <input type="text" id="replyInput" class="chat-input" placeholder="Type your reply..." style="flex: 1;" />
+        <textarea id="replyInput" class="chat-input" placeholder="Type your reply..." style="flex: 1; resize: none; min-height: 40px; max-height: 200px; overflow-y: auto;" rows="1"></textarea>
         <button id="voiceInputBtn" class="btn btn-secondary" onclick="toggleVoiceInput()" title="Voice input">
           <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
@@ -1813,6 +1813,9 @@
         if (input) {
           input.value = transcript;
           input.focus();
+          // Trigger auto-resize after setting value
+          input.style.height = 'auto';
+          input.style.height = Math.min(input.scrollHeight, 200) + 'px';
         }
         stopVoiceInput();
       };
@@ -1952,8 +1955,20 @@
       if (e.key === 'Enter') sendTeamMessage();
     });
 
-    document.getElementById('replyInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendReply();
+    const replyInput = document.getElementById('replyInput');
+    
+    // Auto-resize textarea as user types
+    replyInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+    });
+    
+    // Send on Enter, new line on Shift+Enter
+    replyInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendReply();
+      }
     });
 
     async function updatePresence() {
