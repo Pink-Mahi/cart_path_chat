@@ -92,6 +92,7 @@ const connections = new Map();
 wss.on('connection', (ws, req) => {
   let visitorId = null;
   let isDashboard = false;
+  let preferredLanguage = 'en';
   
   // Generate a connection ID immediately for all connections
   const connectionId = uuidv4();
@@ -114,13 +115,28 @@ wss.on('connection', (ws, req) => {
         connections.delete(connectionId);
         
         visitorId = message.visitorId;
+        preferredLanguage = message.language === 'es' ? 'es' : 'en';
         connections.set(visitorId, ws);
-        
-        ws.send(JSON.stringify({
-          type: 'system',
-          content: 'Hi 👋\n\nWe specialize in cart path and sidewalk cleaning using a water-recovery system designed to prevent stormwater violations.\n\nAre you looking to:\n• Reduce environmental liability\n• Get pricing\n• Learn how closed-loop cleaning works\n• Schedule a site review',
-          visitorId
-        }));
+
+        const greetingEn =
+          'Hi 👋\n\nWe specialize in cart path and sidewalk cleaning using a water-recovery system designed to prevent stormwater violations.\n\nAre you looking to:\n• Reduce environmental liability\n• Get pricing\n• Learn how closed-loop cleaning works\n• Schedule a site review';
+
+        const greetingEs =
+          'Hola 👋\n\nNos especializamos en la limpieza de senderos para carritos y aceras usando un sistema de recuperación de agua diseñado para prevenir infracciones por escorrentía.\n\n¿Está buscando:\n• Reducir la responsabilidad ambiental\n• Obtener precios\n• Aprender cómo funciona la limpieza de circuito cerrado\n• Programar una revisión del sitio';
+
+        ws.send(
+          JSON.stringify({
+            type: 'system',
+            content: preferredLanguage === 'es' ? greetingEs : greetingEn,
+            visitorId,
+          })
+        );
+        return;
+      }
+
+      // Allow chat widget to change language while connected
+      if (message.type === 'set_language') {
+        preferredLanguage = message.language === 'es' ? 'es' : 'en';
         return;
       }
       
@@ -1025,7 +1041,8 @@ app.post('/api/conversations/:id/assign', requireAuth, async (req, res) => {
 // Business hours endpoint
 app.get('/api/business-hours', (req, res) => {
   const inHours = isBusinessHours();
-  const message = inHours ? null : getAfterHoursMessage();
+  const lang = req.query?.lang === 'es' ? 'es' : 'en';
+  const message = inHours ? null : getAfterHoursMessage(lang);
   res.json({ inBusinessHours: inHours, afterHoursMessage: message });
 });
 

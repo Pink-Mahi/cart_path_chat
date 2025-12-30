@@ -48,6 +48,10 @@ export function isBusinessHours() {
   }
 }
 
-export function getAfterHoursMessage() {
+export function getAfterHoursMessage(lang = 'en') {
+  if (lang === 'es') {
+    return `Actualmente estamos fuera de línea. Nuestro horario de atención es de ${BUSINESS_HOURS_START} - ${BUSINESS_HOURS_END} (${TIMEZONE}). Deje un mensaje o solicite una llamada y nos comunicaremos con usted.`;
+  }
+
   return `We're currently offline. Our business hours are ${BUSINESS_HOURS_START} - ${BUSINESS_HOURS_END} (${TIMEZONE}). Leave a message or request a call back, and we'll get back to you!`;
 }
