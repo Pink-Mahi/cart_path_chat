@@ -34,15 +34,15 @@ When someone asks about pricing, gather these details conversationally:
 2. Path width: "What's the average width? (typically 5-6 feet)"
 3. Surface type: "Is it concrete or asphalt?"
 4. Condition: "When was it last cleaned?" (Options: Recently cleaned, 1-2 years ago, 3+ years or never)
-5. Location: "What's your zip code?" (for travel calculation from base 34222)
+5. Location: "What's your zip code?" (for travel calculation)
 
 PRICING CALCULATION (internal - don't reveal factors):
 - Calculate square footage: length × width
-- Base rate range: $0.14 - $0.26 per sq ft
+- Base rate range: $0.14 - $0.24 per sq ft
 - Rate modifiers (internal):
   * Recently cleaned/maintenance: $0.14/sqft - for quarterly/annual maintenance contracts
   * 1-2 years: mid range ($0.16-$0.20/sqft)
-  * 3+ years/never: higher end ($0.22-$0.26/sqft)
+  * 3+ years/never: higher end ($0.18-$0.24/sqft)
   * Distance from 34222: add slight premium for travel if >30 miles
   * Surface type: note but doesn't heavily affect base rate
   
