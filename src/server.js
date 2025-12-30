@@ -28,6 +28,7 @@ import {
   updateScheduledVisitStatus
 } from './db/scheduling.js';
 import { getAdminSettings, updateAdminSettings } from './db/adminSettings.js';
+import fetch from 'node-fetch';
 import { createCallRequest, getCallRequests, getCallRequest, updateCallRequestStatus } from './db/callRequests.js';
 import { createContactSubmission, getContactSubmissions, getContactSubmission, updateContactSubmissionStatus, assignContactSubmission } from './db/contactSubmissions.js';
 import { createCannedResponse, getCannedResponses, getCannedResponse, updateCannedResponse, deleteCannedResponse } from './db/cannedResponses.js';
@@ -230,6 +231,23 @@ async function handleChatMessage(ws, visitorId, message) {
     // Get AI response
     const { reply, needsHuman } = await getChatResponse(content, history);
     
+    // Generate audio for bot response
+    let audioUrl = null;
+    try {
+      const ttsResponse = await fetch('https://tts.cartpathcleaning.com/synthesize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: reply })
+      });
+      if (ttsResponse.ok) {
+        const ttsData = await ttsResponse.json();
+        audioUrl = `https://tts.cartpathcleaning.com${ttsData.audioUrl}`;
+      }
+    } catch (error) {
+      console.error('TTS generation failed:', error);
+      // Continue without audio if TTS fails
+    }
+    
     // Save bot response
     const botMessage = await addMessage(conversation.id, 'bot', reply);
     
@@ -250,7 +268,8 @@ async function handleChatMessage(ws, visitorId, message) {
       type: 'bot',
       content: reply,
       conversationId: conversation.id,
-      needsHuman
+      needsHuman,
+      audioUrl
     }));
     
     // If AI detected need for human, send notification
