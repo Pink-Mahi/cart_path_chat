@@ -280,6 +280,14 @@
       </div>
       <div class="chat-input-container">
         <input type="text" id="replyInput" class="chat-input" placeholder="Type your reply..." />
+        <button id="voiceInputBtn" class="btn btn-secondary" onclick="toggleVoiceInput()" title="Voice input">
+          <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
         <button class="btn btn-primary" onclick="sendReply()">Send</button>
       </div>
     </div>
@@ -526,6 +534,76 @@
     document.getElementById('replyInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendReply();
     });
+
+    // Voice input functionality
+    let recognition = null;
+    let isRecording = false;
+
+    function toggleVoiceInput() {
+      if (isRecording) {
+        stopVoiceInput();
+      } else {
+        startVoiceInput();
+      }
+    }
+
+    function startVoiceInput() {
+      if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+        alert('Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.');
+        return;
+      }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        isRecording = true;
+        const btn = document.getElementById('voiceInputBtn');
+        btn.style.backgroundColor = '#dc2626';
+        btn.style.borderColor = '#dc2626';
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('replyInput').value = transcript;
+        isRecording = false;
+        resetVoiceButton();
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        isRecording = false;
+        resetVoiceButton();
+        if (event.error === 'not-allowed') {
+          alert('Microphone access denied. Please allow microphone access to use voice input.');
+        }
+      };
+
+      recognition.onend = () => {
+        isRecording = false;
+        resetVoiceButton();
+      };
+
+      recognition.start();
+    }
+
+    function stopVoiceInput() {
+      if (recognition) {
+        recognition.stop();
+        isRecording = false;
+        resetVoiceButton();
+      }
+    }
+
+    function resetVoiceButton() {
+      const btn = document.getElementById('voiceInputBtn');
+      btn.style.backgroundColor = '';
+      btn.style.borderColor = '';
+    }
 
     // Initialize page
     async function init() {
