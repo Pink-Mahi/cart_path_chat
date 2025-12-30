@@ -272,6 +272,7 @@ async function handleChatMessage(ws, visitorId, message) {
     // Send response to original client (visitor)
     ws.send(JSON.stringify({
       type: 'bot',
+      messageId: botMessage.id,
       content: reply,
       conversationId: conversation.id,
       needsHuman,
@@ -569,6 +570,7 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
     if (ws && ws.readyState === ws.OPEN) {
       ws.send(JSON.stringify({
         type: 'admin',
+        messageId: message.id,
         content,
         conversationId: id,
         audioUrl
