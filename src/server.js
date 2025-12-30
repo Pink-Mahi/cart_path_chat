@@ -185,6 +185,24 @@ async function handleChatMessage(ws, visitorId, message) {
     const existingMessages = await getMessages(conversation.id, 1);
     const isFirstVisitorMessage = existingMessages.length === 0;
 
+    // Get customer language preference
+    const customerLanguage = message.language || 'en';
+    
+    // Store customer language in conversation if it's Spanish
+    if (customerLanguage === 'es') {
+      await query(
+        'UPDATE conversations SET customer_language = $1 WHERE id = $2',
+        [customerLanguage, conversation.id]
+      );
+    }
+
+    // Translate Spanish message to English for AI processing
+    let contentForAI = content;
+    if (customerLanguage === 'es') {
+      contentForAI = await translateToEnglish(content);
+      console.log('Translated Spanish to English:', content, '->', contentForAI);
+    }
+
     // Save visitor message
     const visitorMessage = await addMessage(conversation.id, 'visitor', content);
 
@@ -208,8 +226,8 @@ async function handleChatMessage(ws, visitorId, message) {
     // Get conversation history
     const history = await getMessages(conversation.id);
     
-    // Check if should escalate to human
-    const needsEscalation = await shouldEscalateToHuman(content, history);
+    // Check if should escalate to human (use English version)
+    const needsEscalation = await shouldEscalateToHuman(contentForAI, history);
     
     if (needsEscalation) {
       await sendHumanNeededNotification(conversation, content);
@@ -218,9 +236,14 @@ async function handleChatMessage(ws, visitorId, message) {
       await updateConversationStatus(conversation.id, 'needs_human');
       
       const whatsappLink = getBusinessWhatsAppLink();
-      const responseMessage = whatsappLink 
+      let responseMessage = whatsappLink 
         ? `I'd like to connect you with our team for personalized assistance. You can also reach us directly on WhatsApp: ${whatsappLink}`
         : "I'd like to connect you with our team for personalized assistance. Someone will reach out to you shortly at the email you provided.";
+      
+      // Translate response to Spanish if needed
+      if (customerLanguage === 'es') {
+        responseMessage = await translateToSpanish(responseMessage);
+      }
       
       ws.send(JSON.stringify({
         type: 'bot',
@@ -232,22 +255,30 @@ async function handleChatMessage(ws, visitorId, message) {
       return;
     }
     
-    // Get AI response
-    const { reply, needsHuman } = await getChatResponse(content, history);
+    // Get AI response (use English version for AI)
+    const { reply, needsHuman } = await getChatResponse(contentForAI, history);
+    
+    // Translate reply to Spanish if customer is Spanish-speaking
+    let replyForCustomer = reply;
+    if (customerLanguage === 'es') {
+      replyForCustomer = await translateToSpanish(reply);
+      console.log('Translated English to Spanish:', reply, '->', replyForCustomer);
+    }
     
     // Generate audio for bot response
-    // Use female voice for AI bot
+    // Use appropriate voice for customer's language
     let audioUrl = null;
     try {
       // Preprocess text for more natural TTS output
-      const processedText = addNaturalPauses(preprocessTextForTTS(reply));
+      const processedText = addNaturalPauses(preprocessTextForTTS(replyForCustomer));
+      const voice = getTTSVoice(customerLanguage, 'female');
       
       const ttsResponse = await fetch('https://tts.cartpathcleaning.com/synthesize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           text: processedText,
-          voice: 'en_US-lessac-medium' // Female voice for AI
+          voice: voice
         })
       });
       if (ttsResponse.ok) {
@@ -259,7 +290,7 @@ async function handleChatMessage(ws, visitorId, message) {
       // Continue without audio if TTS fails
     }
     
-    // Save bot response
+    // Save bot response (save English version for admin)
     const botMessage = await addMessage(conversation.id, 'bot', reply);
     
     // Broadcast bot response to all connected clients (including dashboard)
@@ -274,11 +305,11 @@ async function handleChatMessage(ws, visitorId, message) {
       }
     });
     
-    // Send response to original client (visitor)
+    // Send response to original client (visitor) - use translated version
     ws.send(JSON.stringify({
       type: 'bot',
       messageId: botMessage.id,
-      content: reply,
+      content: replyForCustomer,
       conversationId: conversation.id,
       needsHuman,
       audioUrl
@@ -542,19 +573,31 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
     const message = await addMessage(id, 'admin', content);
     await updateConversationStatus(id, 'active');
     
+    // Get conversation to check customer language
+    const conversation = await getConversation(id);
+    const customerLanguage = conversation.customer_language || 'en';
+    
+    // Translate admin message to Spanish if customer is Spanish-speaking
+    let contentForCustomer = content;
+    if (customerLanguage === 'es') {
+      contentForCustomer = await translateToSpanish(content);
+      console.log('Translated admin message to Spanish:', content, '->', contentForCustomer);
+    }
+    
     // Generate audio for admin response
     // Use male voice for admin to distinguish from AI bot
     let audioUrl = null;
     try {
       // Preprocess text for more natural TTS output
-      const processedText = addNaturalPauses(preprocessTextForTTS(content));
+      const processedText = addNaturalPauses(preprocessTextForTTS(contentForCustomer));
+      const voice = getTTSVoice(customerLanguage, 'male');
       
       const ttsResponse = await fetch('https://tts.cartpathcleaning.com/synthesize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           text: processedText,
-          voice: 'en_US-danny-low' // Male voice for admin
+          voice: voice
         })
       });
       if (ttsResponse.ok) {
@@ -570,7 +613,6 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
     }
     
     // Send message to connected client if online
-    const conversation = await getConversation(id);
     const ws = connections.get(conversation.visitor_id);
     
     console.log('Sending admin message to visitor:', conversation.visitor_id, 'audioUrl:', audioUrl);
@@ -579,7 +621,7 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
       ws.send(JSON.stringify({
         type: 'admin',
         messageId: message.id,
-        content,
+        content: contentForCustomer,
         conversationId: id,
         audioUrl
       }));
