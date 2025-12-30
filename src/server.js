@@ -232,12 +232,16 @@ async function handleChatMessage(ws, visitorId, message) {
     const { reply, needsHuman } = await getChatResponse(content, history);
     
     // Generate audio for bot response
+    // Use female voice for AI bot
     let audioUrl = null;
     try {
       const ttsResponse = await fetch('https://tts.cartpathcleaning.com/synthesize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: reply })
+        body: JSON.stringify({ 
+          text: reply,
+          voice: 'en_US-lessac-medium' // Female voice for AI
+        })
       });
       if (ttsResponse.ok) {
         const ttsData = await ttsResponse.json();
@@ -530,6 +534,27 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
     const message = await addMessage(id, 'admin', content);
     await updateConversationStatus(id, 'active');
     
+    // Generate audio for admin response
+    // Use male voice for admin to distinguish from AI bot
+    let audioUrl = null;
+    try {
+      const ttsResponse = await fetch('https://tts.cartpathcleaning.com/synthesize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          text: content,
+          voice: 'en_US-danny-low' // Male voice for admin
+        })
+      });
+      if (ttsResponse.ok) {
+        const ttsData = await ttsResponse.json();
+        audioUrl = `https://tts.cartpathcleaning.com${ttsData.audioUrl}`;
+      }
+    } catch (error) {
+      console.error('TTS generation failed for admin message:', error);
+      // Continue without audio if TTS fails
+    }
+    
     // Send message to connected client if online
     const conversation = await getConversation(id);
     const ws = connections.get(conversation.visitor_id);
@@ -538,7 +563,8 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
       ws.send(JSON.stringify({
         type: 'admin',
         content,
-        conversationId: id
+        conversationId: id,
+        audioUrl
       }));
     }
     
