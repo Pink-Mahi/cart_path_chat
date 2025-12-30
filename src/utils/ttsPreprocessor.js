@@ -4,25 +4,68 @@
  */
 
 /**
- * Converts numbers to spoken text
+ * Converts numbers to words (NeMo-inspired implementation)
+ * @param {number} num - Number to convert
+ * @returns {string} - Number as words
+ */
+function numberToWords(num) {
+  if (num === 0) return 'zero';
+  
+  const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+  const teens = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+  const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+  
+  if (num < 10) return ones[num];
+  if (num < 20) return teens[num - 10];
+  if (num < 100) {
+    const ten = Math.floor(num / 10);
+    const one = num % 10;
+    return tens[ten] + (one ? '-' + ones[one] : '');
+  }
+  if (num < 1000) {
+    const hundred = Math.floor(num / 100);
+    const rest = num % 100;
+    return ones[hundred] + ' hundred' + (rest ? ' ' + numberToWords(rest) : '');
+  }
+  if (num < 1000000) {
+    const thousand = Math.floor(num / 1000);
+    const rest = num % 1000;
+    return numberToWords(thousand) + ' thousand' + (rest ? ' ' + numberToWords(rest) : '');
+  }
+  if (num < 1000000000) {
+    const million = Math.floor(num / 1000000);
+    const rest = num % 1000000;
+    return numberToWords(million) + ' million' + (rest ? ' ' + numberToWords(rest) : '');
+  }
+  
+  return num.toString(); // Fallback for very large numbers
+}
+
+/**
+ * Converts numbers to spoken text (NeMo-inspired normalization)
  * @param {string} text - Text containing numbers
  * @returns {string} - Text with numbers converted to words
  */
 function normalizeNumbers(text) {
   let processed = text;
 
-  // Currency - $42,500.56 -> "forty-two thousand five hundred dollars and fifty-six cents"
+  // Currency with cents - $42,500.56 -> "forty-two thousand five hundred dollars and fifty-six cents"
   processed = processed.replace(/\$([0-9,]+)\.(\d{2})/g, (match, dollars, cents) => {
-    const dollarNum = dollars.replace(/,/g, '');
+    const dollarNum = parseInt(dollars.replace(/,/g, ''));
     const centsNum = parseInt(cents);
+    const dollarWords = numberToWords(dollarNum);
     if (centsNum === 0) {
-      return `$${dollarNum} dollars`;
+      return `${dollarWords} dollars`;
     }
-    return `$${dollarNum} dollars and ${cents} cents`;
+    const centsWords = numberToWords(centsNum);
+    return `${dollarWords} dollars and ${centsWords} cents`;
   });
 
   // Currency without cents - $42,500 -> "forty-two thousand five hundred dollars"
-  processed = processed.replace(/\$([0-9,]+)(?!\.\d)/g, '$$$1 dollars');
+  processed = processed.replace(/\$([0-9,]+)(?!\.\d)/g, (match, amount) => {
+    const num = parseInt(amount.replace(/,/g, ''));
+    return `${numberToWords(num)} dollars`;
+  });
 
   // Temperature - 72F or 72°F -> "72 degrees Fahrenheit"
   processed = processed.replace(/(\d+)\s*°?F\b/gi, '$1 degrees Fahrenheit');
