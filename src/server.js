@@ -24,6 +24,7 @@ import { sendHumanNeededNotification } from './utils/email.js';
 import { sendWhatsAppNotification, getBusinessWhatsAppLink } from './utils/whatsapp.js';
 import { sendTwilioSms, makeTwilioCall } from './utils/twilio.js';
 import { preprocessTextForTTS, addNaturalPauses } from './utils/ttsPreprocessor.js';
+import { detectLanguage, translateToEnglish, translateToSpanish, getTTSVoice } from './utils/translator.js';
 import {
   createScheduledVisit,
   getScheduledVisits,
