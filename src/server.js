@@ -23,6 +23,7 @@ import { getChatResponse, shouldEscalateToHuman } from './ai/openai.js';
 import { sendHumanNeededNotification } from './utils/email.js';
 import { sendWhatsAppNotification, getBusinessWhatsAppLink } from './utils/whatsapp.js';
 import { sendTwilioSms, makeTwilioCall } from './utils/twilio.js';
+import { preprocessTextForTTS, addNaturalPauses } from './utils/ttsPreprocessor.js';
 import {
   createScheduledVisit,
   getScheduledVisits,
@@ -237,11 +238,14 @@ async function handleChatMessage(ws, visitorId, message) {
     // Use female voice for AI bot
     let audioUrl = null;
     try {
+      // Preprocess text for more natural TTS output
+      const processedText = addNaturalPauses(preprocessTextForTTS(reply));
+      
       const ttsResponse = await fetch('https://tts.cartpathcleaning.com/synthesize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          text: reply,
+          text: processedText,
           voice: 'en_US-lessac-medium' // Female voice for AI
         })
       });
@@ -541,11 +545,14 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
     // Use male voice for admin to distinguish from AI bot
     let audioUrl = null;
     try {
+      // Preprocess text for more natural TTS output
+      const processedText = addNaturalPauses(preprocessTextForTTS(content));
+      
       const ttsResponse = await fetch('https://tts.cartpathcleaning.com/synthesize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          text: content,
+          text: processedText,
           voice: 'en_US-danny-low' // Male voice for admin
         })
       });
