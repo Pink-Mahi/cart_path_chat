@@ -214,13 +214,20 @@ async function handleChatMessage(ws, visitorId, message) {
 
     // Translate Spanish message to English for AI processing
     let contentForAI = content;
+    let englishTranslation = null;
     if (customerLanguage === 'es') {
       contentForAI = await translateToEnglish(content);
+      englishTranslation = contentForAI;
       console.log('Translated Spanish to English:', content, '->', contentForAI);
     }
 
-    // Save visitor message
-    const visitorMessage = await addMessage(conversation.id, 'visitor', content);
+    // Save visitor message with metadata including translation
+    const messageMetadata = customerLanguage === 'es' ? {
+      language: 'es',
+      original: content,
+      translation: englishTranslation
+    } : {};
+    const visitorMessage = await addMessage(conversation.id, 'visitor', content, messageMetadata);
 
     // Broadcast visitor message to all connected clients (including dashboard)
     const visitorMessageData = {
