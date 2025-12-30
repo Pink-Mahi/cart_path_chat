@@ -82,6 +82,22 @@ export const getMessages = async (conversationId, limit = 50) => {
   return result.rows;
 };
 
+export const updateMessage = async (messageId, content) => {
+  const result = await query(
+    'UPDATE messages SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+    [content, messageId]
+  );
+  return result.rows[0];
+};
+
+export const deleteMessage = async (messageId) => {
+  const result = await query(
+    'DELETE FROM messages WHERE id = $1 RETURNING *',
+    [messageId]
+  );
+  return result.rows[0];
+};
+
 export const getAllConversations = async (limit = 100, filters = {}) => {
   let whereClause = '1=1';
   const params = [];

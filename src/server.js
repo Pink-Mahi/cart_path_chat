@@ -15,6 +15,8 @@ import {
   updateConversationStatus,
   getConversation,
   assignConversation,
+  updateMessage,
+  deleteMessage,
   query
 } from './db/database.js';
 import { getChatResponse, shouldEscalateToHuman } from './ai/openai.js';
@@ -594,6 +596,47 @@ app.patch('/api/conversations/:id/status', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error updating status:', error);
     res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// Update message (edit)
+app.patch('/api/messages/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+    
+    const message = await updateMessage(id, content.trim());
+    
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+    
+    res.json(message);
+  } catch (error) {
+    console.error('Error updating message:', error);
+    res.status(500).json({ error: 'Failed to update message' });
+  }
+});
+
+// Delete message
+app.delete('/api/messages/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const message = await deleteMessage(id);
+    
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+    
+    res.json({ success: true, message });
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    res.status(500).json({ error: 'Failed to delete message' });
   }
 });
 
