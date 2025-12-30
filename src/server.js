@@ -609,10 +609,30 @@ app.patch('/api/messages/:id', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Content is required' });
     }
     
+    // Get message details before updating to find conversation
+    const msgResult = await query('SELECT * FROM messages WHERE id = $1', [id]);
+    const oldMessage = msgResult.rows[0];
+    
+    if (!oldMessage) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+    
     const message = await updateMessage(id, content.trim());
     
-    if (!message) {
-      return res.status(404).json({ error: 'Message not found' });
+    // Get conversation to find visitor
+    const conversation = await getConversation(oldMessage.conversation_id);
+    
+    // Broadcast message update to visitor via WebSocket
+    if (conversation) {
+      const ws = connections.get(conversation.visitor_id);
+      if (ws && ws.readyState === ws.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'message_updated',
+          messageId: id,
+          content: content.trim(),
+          conversationId: oldMessage.conversation_id
+        }));
+      }
     }
     
     res.json(message);
@@ -627,10 +647,29 @@ app.delete('/api/messages/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     
+    // Get message details before deleting to find conversation
+    const msgResult = await query('SELECT * FROM messages WHERE id = $1', [id]);
+    const oldMessage = msgResult.rows[0];
+    
+    if (!oldMessage) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+    
     const message = await deleteMessage(id);
     
-    if (!message) {
-      return res.status(404).json({ error: 'Message not found' });
+    // Get conversation to find visitor
+    const conversation = await getConversation(oldMessage.conversation_id);
+    
+    // Broadcast message deletion to visitor via WebSocket
+    if (conversation) {
+      const ws = connections.get(conversation.visitor_id);
+      if (ws && ws.readyState === ws.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'message_deleted',
+          messageId: id,
+          conversationId: oldMessage.conversation_id
+        }));
+      }
     }
     
     res.json({ success: true, message });
