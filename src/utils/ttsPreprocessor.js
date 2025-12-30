@@ -4,6 +4,90 @@
  */
 
 /**
+ * Converts numbers to spoken text
+ * @param {string} text - Text containing numbers
+ * @returns {string} - Text with numbers converted to words
+ */
+function normalizeNumbers(text) {
+  let processed = text;
+
+  // Currency - $42,500.56 -> "forty-two thousand five hundred dollars and fifty-six cents"
+  processed = processed.replace(/\$([0-9,]+)\.(\d{2})/g, (match, dollars, cents) => {
+    const dollarNum = dollars.replace(/,/g, '');
+    const centsNum = parseInt(cents);
+    if (centsNum === 0) {
+      return `$${dollarNum} dollars`;
+    }
+    return `$${dollarNum} dollars and ${cents} cents`;
+  });
+
+  // Currency without cents - $42,500 -> "forty-two thousand five hundred dollars"
+  processed = processed.replace(/\$([0-9,]+)(?!\.\d)/g, '$$$1 dollars');
+
+  // Temperature - 72F or 72°F -> "72 degrees Fahrenheit"
+  processed = processed.replace(/(\d+)\s*°?F\b/gi, '$1 degrees Fahrenheit');
+  processed = processed.replace(/(\d+)\s*°?C\b/gi, '$1 degrees Celsius');
+
+  // Percentages - 25% -> "25 percent"
+  processed = processed.replace(/(\d+(?:\.\d+)?)\s*%/g, '$1 percent');
+
+  // Phone numbers - (555) 123-4567 -> "5 5 5, 1 2 3, 4 5 6 7"
+  processed = processed.replace(/\((\d{3})\)\s*(\d{3})-(\d{4})/g, (match, area, prefix, line) => {
+    return `${area.split('').join(' ')}, ${prefix.split('').join(' ')}, ${line.split('').join(' ')}`;
+  });
+
+  // Years - 2024 -> "twenty twenty-four" (when clearly a year)
+  processed = processed.replace(/\b(19|20)(\d{2})\b/g, (match, century, year) => {
+    const centuryNum = parseInt(century + '00');
+    const yearNum = parseInt(year);
+    if (yearNum === 0) {
+      return `${centuryNum}`;
+    }
+    return `${century} ${year}`;
+  });
+
+  // Large numbers with commas - 42,500 -> "42 thousand 500"
+  processed = processed.replace(/\b(\d{1,3}),(\d{3}),(\d{3})\b/g, '$1 million $2 thousand $3');
+  processed = processed.replace(/\b(\d{1,3}),(\d{3})\b/g, '$1 thousand $2');
+
+  // Decimals - 3.14 -> "3 point 1 4"
+  processed = processed.replace(/\b(\d+)\.(\d+)\b/g, (match, whole, decimal) => {
+    return `${whole} point ${decimal.split('').join(' ')}`;
+  });
+
+  // Ordinals - 1st, 2nd, 3rd, 4th -> "first, second, third, fourth"
+  const ordinals = {
+    '1st': 'first', '2nd': 'second', '3rd': 'third', '4th': 'fourth',
+    '5th': 'fifth', '6th': 'sixth', '7th': 'seventh', '8th': 'eighth',
+    '9th': 'ninth', '10th': 'tenth', '11th': 'eleventh', '12th': 'twelfth',
+    '13th': 'thirteenth', '14th': 'fourteenth', '15th': 'fifteenth',
+    '16th': 'sixteenth', '17th': 'seventeenth', '18th': 'eighteenth',
+    '19th': 'nineteenth', '20th': 'twentieth', '21st': 'twenty-first',
+    '22nd': 'twenty-second', '23rd': 'twenty-third', '30th': 'thirtieth',
+    '31st': 'thirty-first'
+  };
+  
+  Object.keys(ordinals).forEach(key => {
+    const regex = new RegExp(`\\b${key}\\b`, 'gi');
+    processed = processed.replace(regex, ordinals[key]);
+  });
+
+  // Time - 3:30pm -> "3 30 PM"
+  processed = processed.replace(/(\d{1,2}):(\d{2})\s*(am|pm)/gi, '$1 $2 $3');
+
+  // Measurements
+  processed = processed.replace(/(\d+)\s*ft\b/gi, '$1 feet');
+  processed = processed.replace(/(\d+)\s*in\b/gi, '$1 inches');
+  processed = processed.replace(/(\d+)\s*lb\b/gi, '$1 pounds');
+  processed = processed.replace(/(\d+)\s*oz\b/gi, '$1 ounces');
+  processed = processed.replace(/(\d+)\s*mph\b/gi, '$1 miles per hour');
+  processed = processed.replace(/(\d+)\s*km\b/gi, '$1 kilometers');
+  processed = processed.replace(/(\d+)\s*mi\b/gi, '$1 miles');
+
+  return processed;
+}
+
+/**
  * Preprocesses text for more natural TTS output
  * @param {string} text - Raw text to be spoken
  * @returns {string} - Preprocessed text optimized for TTS
@@ -12,6 +96,9 @@ export function preprocessTextForTTS(text) {
   if (!text || typeof text !== 'string') return text;
 
   let processed = text;
+
+  // 1. Normalize numbers, currency, and units FIRST
+  processed = normalizeNumbers(processed);
 
   // 1. Normalize whitespace
   processed = processed.replace(/\s+/g, ' ').trim();
