@@ -1794,8 +1794,9 @@
 
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = true;  // Keep listening for continuous speech
+      recognition.interimResults = true;  // Show results as you speak
+      recognition.maxAlternatives = 3;  // Consider multiple interpretations
       recognition.lang = 'en-US';
 
       recognition.onstart = () => {
@@ -1808,16 +1809,28 @@
       };
 
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
+        // Process all results
+        for (let i = 0; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
         const input = document.getElementById('replyInput');
         if (input) {
-          input.value = transcript;
+          // Update with final + interim results
+          input.value = (finalTranscript + interimTranscript).trim();
           input.focus();
           // Trigger auto-resize after setting value
           input.style.height = 'auto';
           input.style.height = Math.min(input.scrollHeight, 200) + 'px';
         }
-        stopVoiceInput();
       };
 
       recognition.onerror = (event) => {
