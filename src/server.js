@@ -549,6 +549,9 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
       if (ttsResponse.ok) {
         const ttsData = await ttsResponse.json();
         audioUrl = `https://tts.cartpathcleaning.com${ttsData.audioUrl}`;
+        console.log('Admin TTS generated successfully:', audioUrl);
+      } else {
+        console.error('Admin TTS response not OK:', ttsResponse.status);
       }
     } catch (error) {
       console.error('TTS generation failed for admin message:', error);
@@ -559,6 +562,8 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
     const conversation = await getConversation(id);
     const ws = connections.get(conversation.visitor_id);
     
+    console.log('Sending admin message to visitor:', conversation.visitor_id, 'audioUrl:', audioUrl);
+    
     if (ws && ws.readyState === ws.OPEN) {
       ws.send(JSON.stringify({
         type: 'admin',
@@ -566,6 +571,9 @@ app.post('/api/conversations/:id/reply', requireAuth, async (req, res) => {
         conversationId: id,
         audioUrl
       }));
+      console.log('Admin message sent via WebSocket with audioUrl:', audioUrl);
+    } else {
+      console.log('WebSocket not open for visitor:', conversation.visitor_id);
     }
     
     res.json(message);
