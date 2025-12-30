@@ -39,8 +39,12 @@ CREATE TABLE IF NOT EXISTS messages (
   sender VARCHAR(50) NOT NULL,
   content TEXT NOT NULL,
   metadata JSONB,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Add updated_at column to existing messages table if it doesn't exist
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 -- Scheduled visits table
 CREATE TABLE IF NOT EXISTS scheduled_visits (
