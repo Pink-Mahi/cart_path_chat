@@ -476,18 +476,29 @@
         }
         
         const messagesContainer = document.getElementById('chatMessages');
+        console.log('=== RENDERING MESSAGES ===');
+        console.log('Total messages:', data.messages.length);
+        
         messagesContainer.innerHTML = data.messages.map(msg => {
-          console.log('Message:', msg.id, 'Sender:', msg.sender, 'Metadata:', msg.metadata, 'Type:', typeof msg.metadata);
+          console.log('\n--- Message ID:', msg.id);
+          console.log('Sender:', msg.sender);
+          console.log('Content:', msg.content);
+          console.log('Metadata:', msg.metadata);
+          console.log('Metadata type:', typeof msg.metadata);
+          
           let messageHtml = `<div class="message message-${msg.sender}">`;
           
           // Metadata is already an object from PostgreSQL JSONB
           const metadata = msg.metadata || {};
-          
-          console.log('Checking metadata.language:', metadata.language, 'Is ES?', metadata.language === 'es');
+          console.log('Metadata.language:', metadata.language);
+          console.log('Metadata.translation:', metadata.translation);
+          console.log('Is visitor?', msg.sender === 'visitor');
+          console.log('Is Spanish?', metadata.language === 'es');
+          console.log('Should show bilingual?', msg.sender === 'visitor' && metadata.language === 'es');
           
           // Show translation for Spanish customer messages
           if (msg.sender === 'visitor' && metadata.language === 'es') {
-            console.log('Showing bilingual message for:', msg.id);
+            console.log('✅ SHOWING BILINGUAL MESSAGE');
             messageHtml += `
               <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.25rem;">
                 🇪🇸 Spanish:
@@ -499,12 +510,15 @@
               <div style="font-style: italic; color: #374151;">${metadata.translation || 'Translation unavailable'}</div>
             `;
           } else {
+            console.log('❌ Showing regular message');
             messageHtml += msg.content;
           }
           
           messageHtml += `</div>`;
           return messageHtml;
         }).join('');
+        
+        console.log('=== FINISHED RENDERING ===');
         
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         
