@@ -82,19 +82,9 @@ export const getMessages = async (conversationId, limit = 50) => {
     [conversationId, limit]
   );
   
-  // Parse metadata JSON strings back to objects
-  const messages = result.rows.map(msg => {
-    if (msg.metadata && typeof msg.metadata === 'string') {
-      try {
-        msg.metadata = JSON.parse(msg.metadata);
-      } catch (e) {
-        console.error('Failed to parse metadata for message', msg.id, ':', e);
-      }
-    }
-    return msg;
-  });
-  
-  return messages;
+  // PostgreSQL JSONB type automatically parses JSON, so metadata is already an object
+  // Just return the rows as-is
+  return result.rows;
 };
 
 export const updateMessage = async (messageId, content) => {

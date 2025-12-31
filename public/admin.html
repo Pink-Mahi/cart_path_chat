@@ -477,22 +477,17 @@
         
         const messagesContainer = document.getElementById('chatMessages');
         messagesContainer.innerHTML = data.messages.map(msg => {
-          console.log('Message:', msg.id, 'Sender:', msg.sender, 'Metadata:', msg.metadata);
+          console.log('Message:', msg.id, 'Sender:', msg.sender, 'Metadata:', msg.metadata, 'Type:', typeof msg.metadata);
           let messageHtml = `<div class="message message-${msg.sender}">`;
           
-          // Parse metadata if it's a string
-          let metadata = msg.metadata;
-          if (typeof metadata === 'string') {
-            try {
-              metadata = JSON.parse(metadata);
-            } catch (e) {
-              console.error('Failed to parse metadata:', e);
-              metadata = null;
-            }
-          }
+          // Metadata is already an object from PostgreSQL JSONB
+          const metadata = msg.metadata || {};
+          
+          console.log('Checking metadata.language:', metadata.language, 'Is ES?', metadata.language === 'es');
           
           // Show translation for Spanish customer messages
-          if (msg.sender === 'visitor' && metadata && metadata.language === 'es') {
+          if (msg.sender === 'visitor' && metadata.language === 'es') {
+            console.log('Showing bilingual message for:', msg.id);
             messageHtml += `
               <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.25rem;">
                 🇪🇸 Spanish:
