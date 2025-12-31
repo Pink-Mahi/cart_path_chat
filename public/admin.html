@@ -476,11 +476,28 @@
         }
         
         const messagesContainer = document.getElementById('chatMessages');
-        messagesContainer.innerHTML = data.messages.map(msg => `
-          <div class="message message-${msg.sender}">
-            ${msg.content}
-          </div>
-        `).join('');
+        messagesContainer.innerHTML = data.messages.map(msg => {
+          let messageHtml = `<div class="message message-${msg.sender}">`;
+          
+          // Show translation for Spanish customer messages
+          if (msg.sender === 'visitor' && msg.metadata && msg.metadata.language === 'es') {
+            messageHtml += `
+              <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.25rem;">
+                🇪🇸 Spanish:
+              </div>
+              <div style="margin-bottom: 0.5rem;">${msg.content}</div>
+              <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.25rem;">
+                🇺🇸 English:
+              </div>
+              <div style="font-style: italic; color: #374151;">${msg.metadata.translation || 'Translation unavailable'}</div>
+            `;
+          } else {
+            messageHtml += msg.content;
+          }
+          
+          messageHtml += `</div>`;
+          return messageHtml;
+        }).join('');
         
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         
