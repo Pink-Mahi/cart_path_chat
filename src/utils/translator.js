@@ -103,7 +103,7 @@ export function getTTSVoice(language, gender = 'female') {
       male: 'en_US-danny-low'
     },
     es: {
-      female: 'es_ES-mls_10246-medium', // Upgraded to medium for better quality
+      female: 'es_ES-mls_10246-low',
       male: 'es_ES-mls_9972-low'
     }
   };
