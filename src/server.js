@@ -204,15 +204,23 @@ async function handleChatMessage(ws, visitorId, message) {
 
     // Auto-detect the actual language of the message content
     const detectedLangCode = franc(content);
-    const detectedLanguage = detectedLangCode === 'spa' ? 'es' : 'en';
     
     // Get customer language preference from toggle (fallback)
     const customerPreference = message.language || 'en';
     
-    // Use detected language for processing, but store preference for conversation tracking
-    const actualLanguage = detectedLanguage;
+    // Use detected language if confident, otherwise fall back to toggle preference
+    // franc returns 'und' (undetermined) for very short messages or when uncertain
+    let actualLanguage;
+    if (detectedLangCode === 'spa') {
+      actualLanguage = 'es';
+    } else if (detectedLangCode === 'eng') {
+      actualLanguage = 'en';
+    } else {
+      // Uncertain detection - use toggle preference
+      actualLanguage = customerPreference;
+    }
     
-    console.log(`Message language - Detected: ${detectedLanguage}, Toggle: ${customerPreference}, Content: "${content.substring(0, 50)}..."`);
+    console.log(`Message language - Detected: ${detectedLangCode}, Toggle: ${customerPreference}, Using: ${actualLanguage}, Content: "${content.substring(0, 50)}..."`);
     
     // Store customer language preference in conversation if it's Spanish
     if (customerPreference === 'es') {
