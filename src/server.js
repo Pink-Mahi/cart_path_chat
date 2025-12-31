@@ -216,8 +216,14 @@ async function handleChatMessage(ws, visitorId, message) {
     } else if (detectedLangCode === 'eng') {
       actualLanguage = 'en';
     } else {
-      // Uncertain detection - use toggle preference
-      actualLanguage = customerPreference;
+      // Uncertain detection - check for Spanish indicators before falling back to toggle
+      const spanishIndicators = /[¿¡]|ñ|á|é|í|ó|ú|ü|pueden|necesito|información|visita|hola|gracias|por favor/i;
+      if (spanishIndicators.test(content)) {
+        actualLanguage = 'es';
+      } else {
+        // No Spanish indicators - use toggle preference
+        actualLanguage = customerPreference;
+      }
     }
     
     console.log(`Message language - Detected: ${detectedLangCode}, Toggle: ${customerPreference}, Using: ${actualLanguage}, Content: "${content.substring(0, 50)}..."`);
