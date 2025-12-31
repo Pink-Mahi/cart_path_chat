@@ -78,12 +78,18 @@ export const addMessage = async (conversationId, sender, content, metadata = {})
 
 export const getMessages = async (conversationId, limit = 50) => {
   const result = await query(
-    'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC LIMIT $2',
+    'SELECT id, conversation_id, sender, content, created_at, updated_at, COALESCE(metadata, \'{}\'::jsonb) as metadata FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC LIMIT $2',
     [conversationId, limit]
   );
   
-  // PostgreSQL JSONB type automatically parses JSON, so metadata is already an object
-  // Just return the rows as-is
+  // Log what we're getting from the database
+  console.log('getMessages - Sample metadata from DB:', result.rows.slice(0, 3).map(r => ({
+    id: r.id,
+    sender: r.sender,
+    metadata: r.metadata,
+    metadataType: typeof r.metadata
+  })));
+  
   return result.rows;
 };
 
