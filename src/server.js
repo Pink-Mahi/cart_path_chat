@@ -25,6 +25,7 @@ import { sendWhatsAppNotification, getBusinessWhatsAppLink } from './utils/whats
 import { sendTwilioSms, makeTwilioCall } from './utils/twilio.js';
 import { preprocessTextForTTS, addNaturalPauses } from './utils/ttsPreprocessor.js';
 import { detectLanguage, translateToEnglish, translateToSpanish, getTTSVoice } from './utils/translator.js';
+import { franc } from 'franc-min';
 import {
   createScheduledVisit,
   getScheduledVisits,
@@ -201,28 +202,37 @@ async function handleChatMessage(ws, visitorId, message) {
     const existingMessages = await getMessages(conversation.id, 1);
     const isFirstVisitorMessage = existingMessages.length === 0;
 
-    // Get customer language preference
-    const customerLanguage = message.language || 'en';
+    // Auto-detect the actual language of the message content
+    const detectedLangCode = franc(content);
+    const detectedLanguage = detectedLangCode === 'spa' ? 'es' : 'en';
     
-    // Store customer language in conversation if it's Spanish
-    if (customerLanguage === 'es') {
+    // Get customer language preference from toggle (fallback)
+    const customerPreference = message.language || 'en';
+    
+    // Use detected language for processing, but store preference for conversation tracking
+    const actualLanguage = detectedLanguage;
+    
+    console.log(`Message language - Detected: ${detectedLanguage}, Toggle: ${customerPreference}, Content: "${content.substring(0, 50)}..."`);
+    
+    // Store customer language preference in conversation if it's Spanish
+    if (customerPreference === 'es') {
       await query(
         'UPDATE conversations SET customer_language = $1 WHERE id = $2',
-        [customerLanguage, conversation.id]
+        [customerPreference, conversation.id]
       );
     }
 
-    // Translate Spanish message to English for AI processing
+    // Only translate if message is actually in Spanish
     let contentForAI = content;
     let englishTranslation = null;
-    if (customerLanguage === 'es') {
+    if (actualLanguage === 'es') {
       contentForAI = await translateToEnglish(content);
       englishTranslation = contentForAI;
       console.log('Translated Spanish to English:', content, '->', contentForAI);
     }
 
-    // Save visitor message with metadata including translation
-    const messageMetadata = customerLanguage === 'es' ? {
+    // Save visitor message with metadata including translation (only if actually Spanish)
+    const messageMetadata = actualLanguage === 'es' ? {
       language: 'es',
       original: content,
       translation: englishTranslation
@@ -263,8 +273,8 @@ async function handleChatMessage(ws, visitorId, message) {
         ? `I'd like to connect you with our team for personalized assistance. You can also reach us directly on WhatsApp: ${whatsappLink}`
         : "I'd like to connect you with our team for personalized assistance. Someone will reach out to you shortly at the email you provided.";
       
-      // Translate response to Spanish if needed
-      if (customerLanguage === 'es') {
+      // Translate response to Spanish if message was in Spanish
+      if (actualLanguage === 'es') {
         responseMessage = await translateToSpanish(responseMessage);
       }
       
@@ -281,20 +291,20 @@ async function handleChatMessage(ws, visitorId, message) {
     // Get AI response (use English version for AI)
     const { reply, needsHuman } = await getChatResponse(contentForAI, history);
     
-    // Translate reply to Spanish if customer is Spanish-speaking
+    // Translate reply to Spanish if message was in Spanish
     let replyForCustomer = reply;
-    if (customerLanguage === 'es') {
+    if (actualLanguage === 'es') {
       replyForCustomer = await translateToSpanish(reply);
       console.log('Translated English to Spanish:', reply, '->', replyForCustomer);
     }
     
     // Generate audio for bot response
-    // Use appropriate voice for customer's language
+    // Use appropriate voice based on detected language
     let audioUrl = null;
     try {
       // Preprocess text for more natural TTS output
       const processedText = addNaturalPauses(preprocessTextForTTS(replyForCustomer));
-      const voice = getTTSVoice(customerLanguage, 'female');
+      const voice = getTTSVoice(actualLanguage, 'female');
       
       const ttsResponse = await fetch('https://tts.cartpathcleaning.com/synthesize', {
         method: 'POST',
