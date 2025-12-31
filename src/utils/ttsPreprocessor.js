@@ -140,10 +140,16 @@ export function preprocessTextForTTS(text) {
 
   let processed = text;
 
-  // 1. Normalize numbers, currency, and units FIRST
+  // 1. Remove or normalize punctuation that TTS might read literally
+  // Replace multiple exclamation marks with period (excitement is in the tone, not the symbol)
+  processed = processed.replace(/!+/g, '.');
+  // Remove asterisks (often used for emphasis in text but not needed for speech)
+  processed = processed.replace(/\*/g, '');
+
+  // 2. Normalize numbers, currency, and units
   processed = normalizeNumbers(processed);
 
-  // 1. Normalize whitespace
+  // 3. Normalize whitespace
   processed = processed.replace(/\s+/g, ' ').trim();
 
   // 2. Add periods to sentences that don't have ending punctuation
