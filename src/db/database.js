@@ -61,9 +61,10 @@ export const getOrCreateConversation = async (visitorId, visitorName, visitorEma
 };
 
 export const addMessage = async (conversationId, sender, content, metadata = {}) => {
+  console.log('addMessage called with metadata:', JSON.stringify(metadata));
   const result = await query(
     'INSERT INTO messages (conversation_id, sender, content, metadata) VALUES ($1, $2, $3, $4) RETURNING *',
-    [conversationId, sender, content, metadata]
+    [conversationId, sender, content, JSON.stringify(metadata)]
   );
   
   await query(
@@ -71,6 +72,7 @@ export const addMessage = async (conversationId, sender, content, metadata = {})
     [conversationId]
   );
   
+  console.log('Message saved with metadata:', result.rows[0].metadata);
   return result.rows[0];
 };
 

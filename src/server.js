@@ -573,6 +573,12 @@ app.get('/api/conversations/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
     
+    console.log('Sending messages to admin:', messages.map(m => ({ 
+      id: m.id, 
+      sender: m.sender, 
+      metadata: m.metadata 
+    })));
+    
     res.json({
       conversation,
       messages

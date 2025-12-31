@@ -477,10 +477,22 @@
         
         const messagesContainer = document.getElementById('chatMessages');
         messagesContainer.innerHTML = data.messages.map(msg => {
+          console.log('Message:', msg.id, 'Sender:', msg.sender, 'Metadata:', msg.metadata);
           let messageHtml = `<div class="message message-${msg.sender}">`;
           
+          // Parse metadata if it's a string
+          let metadata = msg.metadata;
+          if (typeof metadata === 'string') {
+            try {
+              metadata = JSON.parse(metadata);
+            } catch (e) {
+              console.error('Failed to parse metadata:', e);
+              metadata = null;
+            }
+          }
+          
           // Show translation for Spanish customer messages
-          if (msg.sender === 'visitor' && msg.metadata && msg.metadata.language === 'es') {
+          if (msg.sender === 'visitor' && metadata && metadata.language === 'es') {
             messageHtml += `
               <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.25rem;">
                 🇪🇸 Spanish:
@@ -489,7 +501,7 @@
               <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.25rem;">
                 🇺🇸 English:
               </div>
-              <div style="font-style: italic; color: #374151;">${msg.metadata.translation || 'Translation unavailable'}</div>
+              <div style="font-style: italic; color: #374151;">${metadata.translation || 'Translation unavailable'}</div>
             `;
           } else {
             messageHtml += msg.content;
