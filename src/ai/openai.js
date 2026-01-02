@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import { getKnowledgeBaseAsContext } from '../db/knowledgeBase.js';
+import { calculateCartPathPricing } from '../utils/pricingCalculator.js';
 
 dotenv.config();
 
@@ -37,20 +38,18 @@ When someone asks about pricing, gather these details conversationally:
 4. Condition: "When was it last cleaned?" (Options: Recently cleaned, 1-2 years ago, 3+ years or never)
 5. Location: "What's your zip code?" (for travel calculation)
 
-PRICING CALCULATION (internal - don't reveal factors):
-- Calculate square footage: length × width
-- Base rate range: $0.14 - $0.24 per sq ft
-- Rate modifiers (internal):
-  * Recently cleaned/maintenance: $0.14/sqft - for quarterly/annual maintenance contracts
-  * 1-2 years: mid range ($0.16-$0.20/sqft)
-  * 3+ years/never: higher end ($0.18-$0.24/sqft)
-  * Distance from 34222: add slight premium for travel if >30 miles
-  * Surface type: note but doesn't heavily affect base rate
-  
-Note: $0.14/sqft is for ongoing maintenance contracts (quarterly/annual) where initial cleaning was done at higher rate. For first-time cleanings, start at $0.16/sqft minimum.
+PRICING CALCULATION:
+When you have gathered length, width, and condition information, YOU MUST use the calculate_cart_path_pricing function to get accurate pricing.
 
-PROVIDE ESTIMATE (keep it brief):
-"For [X] sq ft, you're looking at roughly $[LOW]-$[HIGH]. Our team will provide an exact quote after a quick site review."
+NEVER calculate pricing manually - always use the function to ensure accuracy.
+
+Condition categories for the function:
+- 'maintenance' or 'recently cleaned': For ongoing maintenance contracts ($0.14-$0.16/sqft)
+- 'moderate' or '1-2 years': Mid-range for paths cleaned 1-2 years ago ($0.16-$0.20/sqft)
+- 'heavy' or '3+ years' or 'never': Higher rate for heavily soiled paths ($0.18-$0.24/sqft)
+
+After receiving the calculation result, present it conversationally:
+"For [X] square feet, you're looking at roughly [formattedRange]. Our team will provide an exact quote after a quick site review."
 
 For 3+ year old paths: "We offer discounts on initial cleaning when you sign up for annual maintenance."
 
@@ -90,15 +89,91 @@ export async function getChatResponse(messages, conversationHistory = []) {
       { role: 'user', content: messages }
     ];
 
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'calculate_cart_path_pricing',
+          description: 'Calculate accurate pricing for cart path cleaning based on dimensions and condition. Use this whenever you need to provide a price estimate.',
+          parameters: {
+            type: 'object',
+            properties: {
+              length: {
+                type: 'number',
+                description: 'The length of the cart path'
+              },
+              lengthUnit: {
+                type: 'string',
+                enum: ['feet', 'miles'],
+                description: 'The unit of measurement for length (feet or miles)'
+              },
+              width: {
+                type: 'number',
+                description: 'The width of the cart path in feet'
+              },
+              condition: {
+                type: 'string',
+                enum: ['maintenance', 'moderate', 'heavy'],
+                description: 'The condition of the path: maintenance (recently cleaned), moderate (1-2 years), or heavy (3+ years/never cleaned)'
+              }
+            },
+            required: ['length', 'lengthUnit', 'width', 'condition']
+          }
+        }
+      }
+    ];
+
     const response = await openai.chat.completions.create({
       model: 'gpt-4-turbo-preview',
       messages: formattedMessages,
       temperature: 0.7,
       max_tokens: 150,
+      tools,
+      tool_choice: 'auto'
     });
 
-    const reply = response.choices[0].message.content;
+    const message = response.choices[0].message;
     
+    // Check if AI wants to use a function
+    if (message.tool_calls && message.tool_calls.length > 0) {
+      const toolCall = message.tool_calls[0];
+      
+      if (toolCall.function.name === 'calculate_cart_path_pricing') {
+        // Parse the function arguments
+        const args = JSON.parse(toolCall.function.arguments);
+        
+        // Execute the pricing calculation
+        const pricingResult = calculateCartPathPricing(args);
+        
+        // Send the function result back to the AI
+        const secondResponse = await openai.chat.completions.create({
+          model: 'gpt-4-turbo-preview',
+          messages: [
+            ...formattedMessages,
+            message,
+            {
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: JSON.stringify(pricingResult)
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 150
+        });
+        
+        const reply = secondResponse.choices[0].message.content;
+        const needsHuman = reply.toLowerCase().includes('connect you with our team') ||
+                           reply.toLowerCase().includes('human assistance');
+        
+        return {
+          reply,
+          needsHuman
+        };
+      }
+    }
+    
+    // No function call - return regular response
+    const reply = message.content;
     const needsHuman = reply.toLowerCase().includes('connect you with our team') ||
                        reply.toLowerCase().includes('human assistance');
 
